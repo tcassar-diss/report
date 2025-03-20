@@ -11,7 +11,7 @@
 
 ## Abstract
 
-`addrfilter` is a fine-grained system call filtering mechanism for Linux. Unlike `seccomp`, which applies a global system call filter application, `addrfilter` maps shared libraries to specific sets of allowed system calls. This fine-grained control provides privilege reduction when compared to `seccomp`, restricting what attackers are able to do with a remote code execution exploit.
+`addrfilter` is a fine-grained system call filtering mechanism for Linux. Unlike `seccomp`, which applies a global system call filter to an application, `addrfilter` maps shared libraries to specific sets of allowed system calls. This fine-grained control provides privilege reduction when compared to `seccomp`, restricting what attackers are able to do with a remote code execution exploit.
 
 ## Introduction
 
@@ -474,4 +474,3 @@ binaries
 - Static analysis for per-library whitelist generation
 - Further investigation into Docker and `bpf_get_stack` incomatibility
     - Given widespread docker use, a good idea
-   ```
