@@ -1,8 +1,119 @@
 # Fine-Grained Linux System Call Filtering
 
+## Todos for Report
+1. More benchmarks
+2. Run with a Java program!
+    - Hadn't thought about JIT; could be a problem
+    - If it is a problem, will talk about in future works
+    - Hopefully the address space won't be moving around with JIT
+3. Related works
+    - Snowball from bank of papers in Zotero
+
 ## Abstract
 
+`addrfilter` is a fine-grained system call filtering mechanism for Linux. Unlike `seccomp`, which applies a global system call filter application, `addrfilter` maps shared libraries to specific sets of allowed system calls. This fine-grained control provides privilege reduction when compared to `seccomp`, restricting what attackers are able to do with a remote code execution exploit.
+
 ## Introduction
+
+### Context
+- What is syscall filtering
+    - Security measure for detecting compromise of applications
+    - Breaches in confidentiality and data integrity can be mitigated by
+    killing processes which trip the filter 
+    - Program making syscall not in its source code => dangerous
+    misbehaviour; probable indication of compromise
+
+### Problem
+- Applications are large: set of syscalls an application makes grows with
+ LoC => traditional seccomp filters become less effective
+- Attackers have more syscalls to exploit without risking tripping a syscall
+filter
+
+### Motivation
+- Applications are large; `seccomp` doesn't adhere to principle of least
+  privilege.
+- Syscall filtering is a commonly used security practice; sometimes developers
+  are unaware that they are using it (e.g. Docker container not running with
+`--privileged` flag)
+- Being able to generate smaller lists for large applications will make it
+harder for attackers to damage systems (in terms of confidentiality,
+availability) if they have an RCE exploit.
+
+### Timeliness
+
+_Reword the following (para 1 from PhD proposal)_
+
+In an increasingly politically unstable world, software security is more critical than ever. Recent
+successful cyberattacks on critical infrastructure and private data leaks show that our level of cyber
+resilience is not where it needs to be: at the time when cyberattacks have become an instrument
+of war, we need more robust software. Systems software (e.g. operating systems) are the backbone
+of computer systems security, however they have historically been built using unsafe programming
+languages, opening the possibility for exploits against which existing standard countermeasures are
+insufficient. The recent push towards safe systems programming languages (e.g. Rust) and formal
+verification of systems software will improve the status quo, but will take decades to be fully adopted,
+and is unlikely to entirely eliminate vulnerabilities.
+
+### Aims and Objectives
+1. Allow a user to define a set of system call filters which map dynamically linked shared libraries to a set of allowed system calls.
+2. Implement a mechanism which can:
+    - Determine which library a system call has come from
+    - Detect what type of system call has been called (i.e. syscall number)
+    - Take (user-configurable) action if any part of the application makes a
+    system call which isn't on the whitelist
+3. Provide a user-friendly command line interface which can
+    - Accept (and parse) a set of system call whitelists
+    - Launch an application with the whitelists enabled, or apply the provided
+      filters to an already running application
+    - Allow the user to configure what to do when a system call trips the
+    filter: warn, kill only the affected process, or kill all forks of the
+    original process
+
+### Solution
+- Is it possible to create smaller, more specific filters for an application?
+    - SysPart: "_temporal_" filter for setup/steady state phases of server
+    applications
+- Proposed research: create a "_spacial_" filter which accounts for where
+ in a process's address space a system call originated.
+- Conceptually nice way to break up an application: apply a bespoke filter
+ to each file-backed portion of the process's virtual address space.
+
+### Challenges
+
+- Generating a per-library whitelists
+- Identifying system call invocation sites
+    - 'rp' will point to 'libc' wrapper: not meaninful
+- Avoiding TOCTOU issues
+    - Map return pointer with files in address space synchronously; otherwise
+    address space, backing files, can all change
+    - Kill an erroneous process before the system call happens
+- Providing a good UX
+    - Easy to use, informative CLI
+- Working with eBPF is a challenge in itself
+    - No documentation, lots of kernel code reading
+- Edge cases
+    - JIT compilation
+    - Maintaining performance when stressed
+
+
+### Evaluation Strategy
+- Need to evaluate **costs** and **benefits** of the approach
+- Calculating benefits will be done by **quantifying privilege reduction** 
+    - Define a metric which will quantify privilege level of an
+    application
+    - Compare privilege of unfiltered/seccomp/proposed
+    - Will require analysis tooling to identify which libraries make which
+    syscalls 
+
+- Calculating costs will be done by looking at slowdown across a broad range of
+  benchmarks
+    - Compare unfiltered, seccomp, proposed ### Success Criteria The user should be able to define an allowed set of system calls for each file-backed region of a process's address space
+- If a region makes a syscall not in it's whitelist, the program should warn the
+  user, kill the process, or kill all monitored processes (user configuration
+dependant)
+- The PoC should demonstrate a level of privilege reduction compared to a
+blanket system call filter for both large (e.g. `nginx`) and small (e.g. a C
+`hello world`) reduction in privilege for dynamically linked binaries 
+- The applications running protected under the PoC should still be performant
 
 ## Background
 
@@ -27,7 +138,7 @@
 
 ### What is compartmentalisation
 - Defensive security design measure
-- Very broad concept: can refer to harre-enforced isolation strategies e.g.
+- Very broad concept: can refer to hardware-enforced isolation strategies e.g.
 CHERI, MPX; can refer more broadly to design in which attackers who take over a
 compartment in some way are confined to it.
 
@@ -56,9 +167,11 @@ compartment in some way are confined to it.
 - What is a ringbuffer
 
 ### Traditional filtering mechanisms
-- `seccomp`
-- Problem: too broad! Not designed with compartmentalisation in mind. Violates
-principle of least privilege. 
+- `seccomp`: broad range application filter
+- Used very often
+    - Docker "_built in_" filter
+- Pain to configure
+    - Happens via `prctl` syscall
 
 ### Processes
 - Processes provide strong "_inter-application_" isolation
@@ -71,17 +184,11 @@ principle of least privilege.
     - `file` struct
 
 #### Process's stack
-- What is an RP
-- Stack frames
-
-## Motivation
-- Traditional system call filters are too broad
-- Applications are large; `seccomp` doesn't adhere to principle of least
-  privilege.
-- Opportunity to secure applications by:
-    - Defining system call permissions in terms of multiple filters
-    - Have the scope of each filter limited to calls originating from a
-    specified part of the process's address space
+- Each process has its own stack
+- Relevant parts of stack frame
+    - RPs: used to unwind the stack
+    - RP added on a function call; can therefore use stack to "_trace a path_"
+    through the code
 
 ## Design
 
@@ -344,3 +451,27 @@ vma walking portion of `addrfilter`
     - More research needed to identify problem source
 
 ## Related Works
+- SysPart: temporal filtering of syscalls
+- Eternal War in Memory SoK
+- Work on automating syscall whitelist generation
+- C2C: excluding dead code (based on config) from `seccomp` filter
+- SysFilter: very useful for motivation that binaries are getting bigger
+    - e.g. `/bin/true` 0 LoC -> 2.3k in ubuntu 
+- Talk about differences from emulation work
+    - Proposed research is security focused; not about emulation.
+
+#### Future Work
+- Function level system call filtering
+- Providing spacial system call filtering mechanism for **statically linked**
+binaries
+    - Gaining popularity: e.g. Go, Rust
+    - Harder to statically analyse: larger binaries => more runtime
+    - Cannot break up by address space (or rather no meaningful privilege
+    reduction: go binaries feature the following)
+    - For instance, go build will only have one file mapped in its address
+    space: /home/"$USER"/tmp/[PACKAGE NAME]
+
+- Static analysis for per-library whitelist generation
+- Further investigation into Docker and `bpf_get_stack` incomatibility
+    - Given widespread docker use, a good idea
+   ```
