@@ -28,10 +28,10 @@
  LoC => traditional seccomp filters become less effective
 - Attackers have more syscalls to exploit without risking tripping a syscall
 filter
+- e.g. `/bin/true` - zero LoC when first introduced; 2.9k LoC (asm) on Ubuntu 24.04.2 LTS
+    - (from sysfilter paper)
 
 ### Motivation
-- Applications are large; `seccomp` doesn't adhere to principle of least
-  privilege.
 - Syscall filtering is a commonly used security practice; sometimes developers
   are unaware that they are using it (e.g. Docker container not running with
 `--privileged` flag)
@@ -41,17 +41,16 @@ availability) if they have an RCE exploit.
 
 ### Timeliness
 
-_Reword the following (para 1 from PhD proposal)_
+_Reworded the following para from PhD proposal w aid of ChatGPT_
 
-In an increasingly politically unstable world, software security is more critical than ever. Recent
-successful cyberattacks on critical infrastructure and private data leaks show that our level of cyber
-resilience is not where it needs to be: at the time when cyberattacks have become an instrument
-of war, we need more robust software. Systems software (e.g. operating systems) are the backbone
-of computer systems security, however they have historically been built using unsafe programming
-languages, opening the possibility for exploits against which existing standard countermeasures are
-insufficient. The recent push towards safe systems programming languages (e.g. Rust) and formal
-verification of systems software will improve the status quo, but will take decades to be fully adopted,
-and is unlikely to entirely eliminate vulnerabilities.
+Modern cyberattacks increasingly target critical infrastructure, exploiting 
+weaknesses in system software to escalate privileges or exfiltrate sensitive
+data. Traditional syscall filtering mechanisms like seccomp were designed when
+applications were smaller and more predictable, but modern software's growing
+complexity renders these filters less effective. Attackers now have more 
+opportunities to execute malicious syscalls without triggering security 
+mechanisms. Addressing this gap requires more fine-grained syscall filtering
+approaches that account for execution context and library usage.
 
 ### Aims and Objectives
 1. Allow a user to define a set of system call filters which map dynamically linked shared libraries to a set of allowed system calls.
@@ -72,16 +71,20 @@ and is unlikely to entirely eliminate vulnerabilities.
 - Is it possible to create smaller, more specific filters for an application?
     - SysPart: "_temporal_" filter for setup/steady state phases of server
     applications
-- Proposed research: create a "_spacial_" filter which accounts for where
+- Proposed research: create a "_spatial_" filter which accounts for where
  in a process's address space a system call originated.
 - Conceptually nice way to break up an application: apply a bespoke filter
  to each file-backed portion of the process's virtual address space.
 
+- Create a PoC `addrfilter` which accepts a set of whitelists, mapping
+ dynamically linked libraries to a set of system calls that they are allowed
+ to make
+
 ### Challenges
 
-- Generating a per-library whitelists
+- Generating per-library whitelists
 - Identifying system call invocation sites
-    - 'rp' will point to 'libc' wrapper: not meaninful
+    - 'rp' will point to `libc` wrapper: not meaningful
 - Avoiding TOCTOU issues
     - Map return pointer with files in address space synchronously; otherwise
     address space, backing files, can all change
@@ -107,7 +110,7 @@ and is unlikely to entirely eliminate vulnerabilities.
 - Calculating costs will be done by looking at slowdown across a broad range of
   benchmarks
     - Compare unfiltered, seccomp, proposed ### Success Criteria The user should be able to define an allowed set of system calls for each file-backed region of a process's address space
-- If a region makes a syscall not in it's whitelist, the program should warn the
+- If a region makes a syscall not in its whitelist, the program should warn the
   user, kill the process, or kill all monitored processes (user configuration
 dependant)
 - The PoC should demonstrate a level of privilege reduction compared to a
@@ -462,7 +465,7 @@ vma walking portion of `addrfilter`
 
 #### Future Work
 - Function level system call filtering
-- Providing spacial system call filtering mechanism for **statically linked**
+- Providing spatial system call filtering mechanism for **statically linked**
 binaries
     - Gaining popularity: e.g. Go, Rust
     - Harder to statically analyse: larger binaries => more runtime
