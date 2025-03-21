@@ -213,15 +213,16 @@ virtual address space
 ## Design
 
 ### Requirements
-1. User should be able to configure a whitelist which provides a set of allowed
-   syscall numbers for each shared library mapped in a process's address space
-   suspected malicious processes or just warn that the filter has been tripped.
-2. Provide an easy to use CLI for the user, with options to attach the filter to
+1. Users should be able to configure a whitelist that defines allowed syscalls
+   for each shared library mapped into a process’s address space.
+2. If a process violates this whitelist, the system should either terminate 
+   the process or issue a warning, based on user configuration.
+3. Provide an easy to use CLI for the user, with options to attach the filter to
    an already running PID or to launch an executable with the filter enabled
-3. If a system call happens and is not in the whitelist of it's invoking shared
+4. If a system call happens and is not in the whitelist of it's invoking shared
    library, the process should be killed before the syscall starts (or the user
 should be warned, config dependant.)
-4. The program should apply the same filter to any forked processes of the
+5. The program should apply the same filter to any forked processes of the
    original process being filtered. The configuring user should be given the
 option to have all forks killed if any process trips the filter.
 
@@ -231,8 +232,9 @@ option to have all forks killed if any process trips the filter.
 - Attacker does not already have root access
 
 #### Threat Model
-- Attacker has compromised the protected process and has an (R)CE exploit.
-- The attacker decides to run code on the system which uses system calls.
+- Attacker has compromised the protected process and has an RCE exploit.
+- The attacker decides to run malicious code on the system which uses system 
+  calls.
 
 ### User configuration
 - launch vs attach
@@ -260,12 +262,14 @@ provided PID (attatching)
 3. Find syscall site
     - Walk stack until first non-libc return pointer is found and use this as
     syscall invocation site
-4. Walk `vma_struct` red black tree to find which shared library the syscall
-   was invoked from
+4. Walk `vma_struct` red black tree to find which shared library made the
+   system call
 5. Retrieve the relevant whitelist for the given shared libary
 6. Check to see if the syscall is in the whitelist
 7. (depending on config) warn, kill the process (sync) or kill all processes
    being followed (sync kill for compromised process, async for others)
+8. If stack walking/vma_struct rb walking fails, then system calls should be
+   allowed to happen as false positives are unacceptable in production.
 
 ## Implementation
 
