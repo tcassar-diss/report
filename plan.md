@@ -8,6 +8,8 @@
     - Hopefully the address space won't be moving around with JIT
 3. Related works
     - Snowball from bank of papers in Zotero
+4. After reading up on performance engineering, realised I am actually tracing
+   not profling - need to rename?
 
 ## Abstract
 
@@ -225,6 +227,9 @@ should be warned, config dependant.)
 5. The program should apply the same filter to any forked processes of the
    original process being filtered. The configuring user should be given the
 option to have all forks killed if any process trips the filter.
+6. In case of failures in the filtering mechanism (e.g stack walking fails),
+   **availability** should be prioritised (e.g. warn userspace, don't kill
+   process)
 
 ### Assumptions
 - `libc` address space will not change (addressed in future works)
@@ -282,19 +287,21 @@ provided PID (attatching)
 - Contains code to listen to the warn ringbuffer and either warns or kills all
 forked processes as configured
 
-### BPF/Go integration: `go2bpf`
-- `bpf2go` is a pure go library which makes it easy to interop go with bpf
-- Supports BPF CORE (compile once, run anywhere)
+### BPF/Go integration: `cilium/ebpf`
+- `bpf2go` is a Go tool (part of cilium/ebpf) that generates Go bindings for 
+   compiled BPF programs.
 - Handles compilation of C to BPF bytecode and autogenerates structs and
-handlers for maps in Go.
+  handlers for maps in Go.
+- Supports BPF CO-RE (Compile Once, Run Anywhere), making deployment across
+  different kernel versions easier.
 
 ### BPF Maps
 - Maps are used by BPF programs to store data. They are also accessible from
 userspace by appropriately privileged users (by default, just root)
 - Maps can be used to persist data between BPF program runs, and can be used for
-  communicating with userspace. Unordered, not syncable. 
-- Not thread safe - concurrent writes need to be explicitly guarded against
-e.g. with a mutex, `__sync_fetch_and_add`, etc,.
+  communicating with userspace. Unordered. 
+- Not always thread safe - concurrent writes need to be explicitly guarded against
+e.g. with a mutex, `__sync_fetch_and_add`, etc, (dependant on map type).
 
 ### BPF Ringbuffers
 - Used for message passing to/from userspace
@@ -305,9 +312,9 @@ e.g. with a mutex, `__sync_fetch_and_add`, etc,.
     - `task` struct, `parent` struct
     - read `tgid` instead of `pid` as threads conceptually different in
     kernelspace
-    - if PID not in fiter map, return
+    - if PID not in filter map, return
 2. Fork following
-    - If PPID in apply list, then add PID to apply list
+    - If PPID in filter map, then add PID to filter map
 3. Find syscall site
     - Use `bpf_get_stack` helper to pull user stackframes return pointers
     - Loop over return addresses: continue if in libc range (stored in libc
@@ -322,7 +329,8 @@ e.g. with a mutex, `__sync_fetch_and_add`, etc,.
 5. Use the filename as a key to pull the whitelist for the given shared
    library
 6. Pull syscall number (`n`) from the `task` struct, and check the `n`th bit of
-   the whitelist bitmap. 0 <=> block, 1 <=> allow
+   the whitelist bitmap. 0 <=> block, 1 <=> allow; bitmap chosen as efficient
+   and fast.
 7. If allow, return with no further action from tracepoint
 8. If block
     - Warn: write syscall number, shared libary filename to warn ringbuf
