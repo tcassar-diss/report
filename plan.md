@@ -134,16 +134,27 @@ blanket system call filter for both large (e.g. `nginx`) and small (e.g. a C
     - `syscall` is a 0-ary x86 instruction
     - Need to place instructions in relevant registers
     - => need to write inline assembly to trigger a syscall yourself
+    - ISA-specific; doesn't need detail, just say problem solved by BPF-CORE
 
 - Syscalls (almost always) via libc
 - `libc` provides a `syscall()` function to avoid inline asm
 - `libc` also provides lots of wrapper functions e.g. `open`
+
+#### What happens during a context switch
+- Software interrupt
+- Saving/restoring registers
+- Sanitising syscall arguments
+- Cache pollution
+- Pipeline flush
+- TLB flush
 
 ### What is compartmentalisation
 - Defensive security design measure
 - Very broad concept: can refer to hardware-enforced isolation strategies e.g.
 CHERI, MPX; can refer more broadly to design in which attackers who take over a
 compartment in some way are confined to it.
+- Could also refer to tab sandboxing in Chrome: processes enforce isolation by
+design; prevents tabs from accessing each others' data.
 
 ### Security basics (for project)
 - What is privilege
@@ -153,15 +164,21 @@ compartment in some way are confined to it.
 
 ### eBPF
 - What problem does BPF solve
-- Verification; limited expressivity
+    - Efficient, sandboxed code execution **in kernel**
+- Verification
+    - Limited expressivity, guaranteed safe code
 
 - Common uses
+    - Patching vulnerabilities e.g. drop malicious packets
+    - Tracing/profiling
 - Trend towards being more capable
+    - Possible to write "bpf helper functions"; worry that it breaks formal
+    verification (if implemented incorrectly)
 
 #### eBPF basics
 - What is a tracepoint
-    - When does it run
-    - How is it loaded
+    - When does it run (depends on tracepoint - key point is _event driven_)
+    - How is it loaded (by root user, bpf syscall)
 
 - What is a map
     - `BPF_MAP_TYPE_ARRAY`
@@ -181,7 +198,8 @@ compartment in some way are confined to it.
 
 #### Address Space 
 - Statically vs Dynamically linked executables
-- Understanding `/proc/pid/maps`
+- Understanding `/proc/pid/maps`: human-parsable representation of a process's
+virtual address space 
 - What does the address space look like under the hood
     - `vma_struct` red black tree
     - `file` struct
@@ -189,7 +207,6 @@ compartment in some way are confined to it.
 #### Process's stack
 - Each process has its own stack
 - Relevant parts of stack frame
-    - RPs: used to unwind the stack
     - RP added on a function call; can therefore use stack to "_trace a path_"
     through the code
 
