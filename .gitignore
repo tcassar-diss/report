@@ -1,5 +1,5 @@
 structure.md
-
+*.pdf
 
 # Provided by 
 #    https://github.com/github/gitignore/blob/main/TeX.gitignore
@@ -35,8 +35,7 @@ structure.md
 *.bcf
 *.bcf-SAVE-ERROR
 *.blg
-*-blx.aux
-*-blx.bib
+*-blx.aux *-blx.bib
 *.run.xml
 
 ## Build tool auxiliary files:
