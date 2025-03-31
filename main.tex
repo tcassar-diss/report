@@ -1,4 +1,4 @@
-\documentclass[fontsize=12pt]{report}
+\documentclass[fontsize=12pt]{article}
 
 \usepackage{diss}
 
@@ -11,24 +11,26 @@
 \begin{document}
 
 \import{./}{title}
-% \clearpage
-% \thispagestyle{empty}
-%
-% \tableofcontents
-%
-% \mainmatter
-% \chapter{First chapter}
-% \import{sections/}{section1-1.tex}
-% \import{sections/}{section1-2.tex}
-%
-% \chapter{Additional chapter}
-% \import{sections/}{section2-1.tex}
-%
-% \chapter{Last chapter}
-% \import{sections/}{section3-1.tex}
-%
-% \backmatter
-%
-% \import{./}{bibliography.tex}
-%
+
+\clearpage
+\thispagestyle{empty}
+
+\begin{multicols*}{2}
+
+\import{sections/}{introduction.tex}
+
+\import{sections/}{background.tex}
+
+\import{sections/}{design.tex}
+
+\import{sections/}{implementation.tex}
+
+\import{sections/}{evaluation.tex}
+
+\import{sections/}{conclusion.tex}
+
+\import{./}{bibliography.tex}
+
+\end{multicols*}
+
 \end{document}

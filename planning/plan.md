@@ -13,51 +13,68 @@
 
 ## Abstract
 
-`addrfilter` is a fine-grained system call filtering mechanism for Linux. Unlike `seccomp`, which applies a global system call filter to an application, `addrfilter` maps shared libraries to specific sets of allowed system calls. This fine-grained control provides privilege reduction when compared to `seccomp`, restricting what attackers are able to do with a remote code execution exploit.
+TODO: Write after introduction written
 
 ## Introduction
 
 ### Context
 - What is syscall filtering
+    - Used to secure programs in multi-tenant environments and sandbox
+    applications [BSIDE](https://dl.acm.org/doi/pdf/10.1145/3652892.3700761)
     - Security measure for detecting compromise of applications
     - Breaches in confidentiality and data integrity can be mitigated by
     killing processes which trip the filter 
     - Program making syscall not in its source code => dangerous
     misbehaviour; probable indication of compromise
 
-### Problem
-- Applications are large: set of syscalls an application makes grows with
- LoC => traditional seccomp filters become less effective
-- Attackers have more syscalls to exploit without risking tripping a syscall
-filter
-- e.g. `/bin/true` - zero LoC when first introduced; 2.9k LoC (asm) on Ubuntu 24.04.2 LTS
+- What is compartmentalisation?
+    - Growing body of research which advocates that we cannot continue to see an
+    application as a single unit of trust [SoK](https://arxiv.org/abs/2410.08434).
+    - Instead, should be decomposing software into "compartments" each with the
+      least privilege they need to run.
+    - General principle; comes in many forms e.g. restricting memory accesses
+    (Intel MPKs, Cheri capabilities/ARM Morello)
+
+### Motivating the Problem
+- Modern cyberattacks increasingly target critical infrastructure, exploiting 
+weaknesses in system software to escalate privileges or exfiltrate sensitive
+data. 
+
+- Applications are large and getting larger => attack surface gets larger and
+larger.
+- e.g. `/bin/true` - zero LoC when first introduced; 2.9k LoC (assembly) on Ubuntu 24.04.2 LTS
     - (from sysfilter paper)
 
-### Motivation
+- As applications grow, the set of syscalls they are legitimately allowed to
+make also increases.
+- Attackers have more syscalls to exploit without risking tripping a syscall
+filter.
+
 - Syscall filtering is a commonly used security practice; sometimes developers
   are unaware that they are using it (e.g. Docker container not running with
 `--privileged` flag)
 - Being able to generate smaller lists for large applications will make it
 harder for attackers to damage systems (in terms of confidentiality,
 availability) if they have an RCE exploit.
+- System call filtering is an application of the _principle of least privilege_
+  [Saltzer and
+Schroeder](https://ieeexplore.ieee.org/abstract/document/1451869); this work
+proposes to push things further and apply syscall filtering on a finer
+granularity.
 
-### Timeliness
-
-_Reworded the following para from PhD proposal w aid of ChatGPT_
-
-Modern cyberattacks increasingly target critical infrastructure, exploiting 
-weaknesses in system software to escalate privileges or exfiltrate sensitive
-data. Traditional syscall filtering mechanisms like seccomp were designed when
-applications were smaller and more predictable, but modern software's growing
-complexity renders these filters less effective. Attackers now have more 
-opportunities to execute malicious syscalls without triggering security 
-mechanisms. Addressing this gap requires more fine-grained syscall filtering
-approaches that account for execution context and library usage.
+- An example problem
+    - One can imagine a program which legitimately uses dangerous syscalls
+    within its main program.
+    - e.g. Bash scripts: almost always spawn subprocesses via `execve`
+    - Bash script legitimately needs access to `execve`, but in a lot of
+    cases, the application being called doesn't.
+    - As it stands, an attacker compromising the application would have access
+    to `execve`!
 
 ### Aims and Objectives
-1. Allow a user to define a set of system call filters which map dynamically linked shared libraries to a set of allowed system calls.
+1. Allow a user to define a set of system call filters which map dynamically linked shared libraries to a set of allowed system calls by implementing whitelist generation tooling.
 2. Implement a mechanism which can:
-    - Determine which library a system call has come from
+    - Determine which software component a system call has come from
     - Detect what type of system call has been called (i.e. syscall number)
     - Take (user-configurable) action if any part of the application makes a
     system call which isn't on the whitelist
@@ -68,29 +85,33 @@ approaches that account for execution context and library usage.
     - Allow the user to configure what to do when a system call trips the
     filter: warn, kill only the affected process, or kill all forks of the
     original process
+4. Comment on the efficacy of the solution in terms of security (evaluation and
+   analysis) and performance overheads when compared to no system call filter
+   and the state of the art (`seccomp`)
 
 ### Solution
-- Is it possible to create smaller, more specific filters for an application?
-    - SysPart: "_temporal_" filter for setup/steady state phases of server
-    applications
+- Approach the idea of system call filtering from a **software
+compartmentalisation perspective**
+    - Decompose the application into smaller units of trust **based on the
+    process's address space**
+    - Give each region its a bespoke narrow system call filter.
+
+![](../diagrams/intro/address-space-decomp.pdf "Address Space Decomposition")
+
 - Proposed research: create a "_spatial_" filter which accounts for where
  in a process's address space a system call originated.
-- Conceptually nice way to break up an application: apply a bespoke filter
- to each file-backed portion of the process's virtual address space.
+- Create tooling which will enable the generation of whitelists per software
+unit e.g. as per the diagram above. In this context, **shared libraries** were
+chosen as units of software.
 
-- Create a PoC `addrfilter` which accepts a set of whitelists, mapping
- dynamically linked libraries to a set of system calls that they are allowed
- to make
+- Create `addrfilter`: an application which is able to detect a compartment
+which has made a syscall which isn't on it's whitelist and take action
+accordingly. This could be killing the process or warning the user (config
+dependant)
 
 ### Challenges
-
-- Generating per-library whitelists
-- Identifying system call invocation sites
-    - 'rp' will point to `libc` wrapper: not meaningful
-- Avoiding TOCTOU issues
-    - Map return pointer with files in address space synchronously; otherwise
-    address space, backing files, can all change
-    - Kill an erroneous process before the system call happens
+- Identifying which software component has made a given system call.
+- Identifying an allowed set of system calls for each software component in an
 - Providing a good UX
     - Easy to use, informative CLI
 - Working with eBPF is a challenge in itself
@@ -108,17 +129,24 @@ approaches that account for execution context and library usage.
     - Compare privilege of unfiltered/seccomp/proposed
     - Will require analysis tooling to identify which libraries make which
     syscalls 
-
 - Calculating costs will be done by looking at slowdown across a broad range of
   benchmarks
     - Compare unfiltered, seccomp, proposed ### Success Criteria The user should be able to define an allowed set of system calls for each file-backed region of a process's address space
 - If a region makes a syscall not in its whitelist, the program should warn the
   user, kill the process, or kill all monitored processes (user configuration
 dependant)
-- The PoC should demonstrate a level of privilege reduction compared to a
+- The solution should demonstrate a level of privilege reduction compared to a
 blanket system call filter for both large (e.g. `nginx`) and small (e.g. a C
 `hello world`) reduction in privilege for dynamically linked binaries 
-- The applications running protected under the PoC should still be performant
+- The applications running protected under the solution should still be performant
+
+- `addrfilter` was implemented and shows promising results
+    - 38.2% privilege reduction in `redis`, 23.7% in `nginx`; two representative
+      server workloads
+    - Saw no significant slowdown in non-intensive applications, and in the
+    worst case, ~30% slowdown in Redis benchmark (stressful)
+    - More than acceptable worst case overhead for such a level of privilege
+    reduction.
 
 ## Background
 
@@ -126,29 +154,22 @@ blanket system call filter for both large (e.g. `nginx`) and small (e.g. a C
  - Userspace (untrusted) software
  - Kernelspace trusted
  - Why is the separation needed?
- - What is a context switch
+ - What is a world switch (user/kernel)
 
 ### What is a system call
 - Secure gate to allow switch from insecure to secure mode
-
-#### Making a system call
-- A bit about ABI
-    - `syscall` is a 0-ary x86 instruction
-    - Need to place instructions in relevant registers
-    - => need to write inline assembly to trigger a syscall yourself
-    - ISA-specific; doesn't need detail, just say problem solved by BPF-CORE
-
-- Syscalls (almost always) via libc
+ Syscalls (almost always) via libc
 - `libc` provides a `syscall()` function to avoid inline asm
 - `libc` also provides lots of wrapper functions e.g. `open`
 
-#### What happens during a context switch
+#### What happens during a world switch
 - Software interrupt
 - Saving/restoring registers
 - Sanitising syscall arguments
-- Cache pollution
-- Pipeline flush
-- TLB flush
+- Architecturally expensive (e.g. cannot be mitigated)
+    - Cache pollution
+    - Pipeline flush
+    - TLB flush
 
 ### What is compartmentalisation
 - Defensive security design measure
@@ -159,10 +180,9 @@ compartment in some way are confined to it.
 design; prevents tabs from accessing each others' data.
 
 ### Security basics (for project)
+- Whitelists and Blacklists (will have been mentioned above)
 - What is privilege
 - What is privilege reduction, principle of least privilege
-- What is TOCTOU (influences design)
-- Confidentiality, Integrity, Availability
 
 ### eBPF
 - What problem does BPF solve
@@ -216,30 +236,34 @@ virtual address space
 
 ### Requirements
 1. Users should be able to configure a whitelist that defines allowed syscalls
-   for each shared library mapped into a process’s address space.
+   for each shared library mapped into a process’s address space. This process
+   should be automated through either dynamic or static analysis.
 2. If a process violates this whitelist, the system should either terminate 
    the process or issue a warning, based on user configuration.
-3. Provide an easy to use CLI for the user, with options to attach the filter to
-   an already running PID or to launch an executable with the filter enabled
-4. If a system call happens and is not in the whitelist of it's invoking shared
-   library, the process should be killed before the syscall starts (or the user
-should be warned, config dependant.)
-5. The program should apply the same filter to any forked processes of the
+3. If a system call happens and is not in the whitelist of it's invoking shared
+   library, the process should be killed before the kernel starts to process the
+   system call(or the user should be warned, config dependant.)
+4. The program should apply the same filter to any forked processes of the
    original process being filtered. The configuring user should be given the
 option to have all forks killed if any process trips the filter.
-6. In case of failures in the filtering mechanism (e.g stack walking fails),
+5. In case of failures in the filtering mechanism (e.g stack walking fails),
    **availability** should be prioritised (e.g. warn userspace, don't kill
    process)
+6. The filtering program should offer meaningful privilege reduction at an
+   acceptable amount of application slowdown. QUESTION: how to quantify this?
 
-### Assumptions
-- `libc` address space will not change (addressed in future works)
-- `libc` mapping is contiguous in process address space
-- Attacker does not already have root access
-
-#### Threat Model
+### Threat Model
 - Attacker has compromised the protected process and has an RCE exploit.
 - The attacker decides to run malicious code on the system which uses system 
   calls.
+- There is some form of compartmentalisation in place which prevents the
+attacker from jumping to part of the address space where the syscall they want
+to use is available. This could be based on Intel MPK, Cheri capabilities, etc.
+- The attacker has taken over a single compartment of the application and is
+trying to escalate privilege
+- The attacker does not have root access
+
+### Solution Architecture
 
 ### User configuration
 - launch vs attach
