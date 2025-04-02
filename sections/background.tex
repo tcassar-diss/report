@@ -38,6 +38,10 @@ process can be loosely thought of as an application - more concretely, it is an
 % memory, it is possible to identify the shared library file which triggered a
 % system call.
 
+% “By inspecting the process's stack and memory layout, it becomes possible to attribute syscalls to specific shared libraries or code regions — a capability which forms the basis for addrfilter's filtering strategy.”
+
+
+
 %TODO:
 % Diagram visualising stack and undwinding with return pointers
 % Diagram visualising process's VMA
@@ -51,8 +55,7 @@ network from userspace.
 Kernel mode, or kernelspace, on the other hand, is a more privileged environment
 than userspace. The kernel has direct access to hardware, memory, and the
 network. As such, one can do a lot of damage from kernel space including causing
-a \textbf{kernel panic} \cite{panic9}.
-% TODO: Explain a kernel panic or reword to a crash owtte
+the kernel to crash.
 
 Therefore, it is vital that only trusted code is run in kernel mode, and that
 non-trusted code is only ever run in user mode. This begs the question: if
