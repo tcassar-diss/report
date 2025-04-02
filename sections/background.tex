@@ -1,1 +1,228 @@
-\section{Background}
+\section{Background} \label{sec:background}
+
+%%% WHAT DOES THE BACKGROUND SECTION ACCOMPLISH?
+% - Here is what you need to know
+% - This is why it's relevant
+
+% Aim for 2,000 words
+
+\texttt{addrfilter} is built on a complex stack of systems technologies,
+including Linux syscall mechanisms, compartmentalisation, and \ac{bpf}. This
+chapter covers the necessary background.
+
+\subsection{Linux Primitives}
+
+There are two core ideas in Linux which underpin not only the design of
+\texttt{addrfilter}, but also the ideas presented in this chapter. A refresher
+of the \textbf{process} and \textbf{kernel} is provided here.
+
+\subsubsection{Processes}
+
+At the core of system call filtering is the concept of a \textbf{process}. A
+process can be loosely thought of as an application - more concretely, it is an
+\textit{instance of an executing program} \cite{LINUX_PROGRAMMING_INTERFACE}.
+
+% Mini paragraph on the stack
+    % Process has its own stack; used to manage functions and control flow
+    % Stack is composed of _stack frames_; include **return pointers**
+    % To analyse the code path which resulted in a system call, we can 
+    % **unwind the stack**
+
+% The return pointers of the stack are virtual memory addresses, pointing to
+% some space in the process's vma (.text section is loaded at runtime by the
+% loader). 
+
+% In a dynamically linked executable, shared libraries will be mapped
+% into different regions of memory. They are file backed, and their originating
+% file is stored in the `vma_struct`. By inspecting the process's virtual
+% memory, it is possible to identify the shared library file which triggered a
+% system call.
+
+%TODO:
+% Diagram visualising stack and undwinding with return pointers
+% Diagram visualising process's VMA
+
+\subsubsection{The Linux Kernel}
+Operating systems have two modes, or \textit{worlds}, associated with them: user
+mode and kernel mode. User mode, or userspace, is designed to run untrusted 
+applications. There is no direct access to hardware, I/O devices, or the 
+network from userspace.
+
+Kernel mode, or kernelspace, on the other hand, is a more privileged environment
+than userspace. The kernel has direct access to hardware, memory, and the
+network. As such, one can do a lot of damage from kernel space including causing
+a \textbf{kernel panic} \cite{panic9}.
+% TODO: Explain a kernel panic or reword to a crash owtte
+
+Therefore, it is vital that only trusted code is run in kernel mode, and that
+non-trusted code is only ever run in user mode. This begs the question: if
+applications aren't allowed direct access to the hardware, then how do user
+applications, such as web browsers, interact with hardware resources? The answer
+is via \textbf{system calls}.
+
+\subsection{System Calls}
+
+When an application running in userspace wants to access hardware - for example,
+to request a page in memory - it issues a \textbf{system call} (or syscall). System calls
+form an \ac{API} which allows userspace programs to ask the kernel to complete some
+task, and return the result back to userspace.
+
+In the case of requesting a memory page, the userspace application will make a
+call to \texttt{mmap()} from the \ac{OS}'s C standard library (e.g. \texttt{libc}).
+This triggers a \textit{world switch}: the process of changing the hardware
+to/from kernel mode.
+
+A world switch is a costly operation, involving flushing any virtually mapped
+caches and copying all the contents of all \ac{CPU} registers to the user stack. This
+is done to ensure a strict separation between kernelspace and userspace, and to
+make sure that the userspace process can continue running as usual after the
+syscall.
+
+Syscall invocation patterns can serve as indicators of compromise
+and are a common feature of host based intrusion detection systems \cite{10.1145/3214304}. 
+Applications only need to make a subset of syscalls
+- if an app makes a syscall that is not in its source code, that is a clear
+indication of compromise. Existing software such as \texttt{seccomp} uses this
+to create a \textbf{syscall filter}, killing any processes which make
+blacklisted syscalls. 
+
+\texttt{addrfilter} builds on what \texttt{seccomp} does by breaking down the
+process's address space into smaller subsections, and assigning a bespoke filter
+to each subsection. This design is a form of \textbf{software
+compartmentalisation}. 
+
+\subsection{Software Compartmentalisation}
+
+Software compartmentalisation is a form of defensive programming where an
+application is broken down into multiple isolated compartments \cite{SOK}. Compartments
+communicate only over secure interfaces and do not trust each other. An attacker
+who manages to compromise one compartment will not be able to gain access to
+data or resources assigned to another compartment. 
+
+Compartmentalisation has proven useful in containing memory safety issues
+\cite{CONFFUZZ},
+sandboxing untrusted third parties \cite{ANDROID_SOK} or unsafe parts of
+languages \cite{MPK} (e.g.
+\texttt{unsafe} in Rust \cite{rustbook_unsafe}). Compartmentalisation is also an
+application of the principle of least privilege to software \cite{PRIVMAN}.
+
+\texttt{addrfilter} is a work under the umbrella of software
+compartmentalisation for this reason: it decomposes the process address space
+and restricts which separated units are allowed to make specific syscalls.
+This functionality is not trivially supported by common tools used to work with
+syscalls such as \texttt{strace}. As such, implementing \texttt{addrfilter}
+required writing extensive amounts of kernel code; \ac{bpf} was chosen for this
+task.
+
+\subsection{Introducing eBPF}
+
+\ac{bpf} is a technology that allows developers to write custom programs which
+can be \textit{dynamically loaded} into the kernel to alter the kernel's
+behaviour \cite{LEARNING_EBPF}. 
+
+Writing kernel code without \ac{bpf} is error-prone and typically
+requires linking to the kernel \cite{UNDERSTANDING_LINUX_KERNEL}. In contrast,
+\ac{bpf} programs can be configured to run on many instrumentation points, such
+as a syscall being triggered. \ac{bpf} also provides a \textbf{verifier} which ensures the  loaded program is safe \cite{LEARNING_EBPF}.
+This makes it impossible to cause a kernel panic (or any similarly
+catastrophic event) when writing \ac{bpf} although real-world exploits targeting the
+verifier have been seen \cite{BPF_VERIFIER_EXPLOIT}. 
+
+As such, \ac{bpf} is used a lot in industry for observability tooling: being able to
+dynamically load \ac{bpf} programs allows developers to instrument running processes
+without changing any configuration files or using sidecar containers \cite{SIDECAR}.
+\ac{bpf} is also often used in networking and firewalls \cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can
+be loaded onto the \ac{xdp} to inspect packets at the ``\textit{earliest possible
+point in the network driver}'' \cite{CILIUM_BPF_XDP_INTRO}. 
+
+The trade-off here is that \ac{bpf} is extremely limited in expressivity:
+something as mundane as reading every element of an array can be impossible due
+to the verifier needing to ensure that every memory access will not result in 
+a null dereference (even though a loop helper now exists \cite{BPF_LOOP_COMMIT}). Lots of accesses to structs must be done through
+\textbf{helper functions} - convenient when they exist, but sometimes mean a
+trivial task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}.
+
+Despite being designed as observability tooling, \ac{bpf} is increasingly being
+used for security applications such as mitigating SPECTRE
+\cite{SPECTRE_BPF_MITIGATION} or dropping carefully-crafted packets that can
+lead to an exploit in kernel \cite{BPF_PACKET_MITIGATION}. Integration with
+\ac{lsm} has been added as part of a suite of security tools for \ac{bpf}
+\cite{StarovoitovBPFSecurity}, which
+shows there is precedent for using \ac{bpf} as security tooling. Furthermore,
+seccompBPF is an extension of the existing seccomp which can define a custom
+syscall filter in terms of a \ac{bpf} program \cite{seccompBPF}. Knowing this information
+justifies why developing \texttt{addrfilter} in \ac{bpf} was a sensible idea.
+
+The next section explores more about seccomp and traditional syscall
+filtering mechanisms, and discusses the gaps in the security guarantees they
+provide.
+
+\subsection{Traditional Filtering Mechanisms}
+
+Syscall filtering was added to the Linux Kernel in 2005 for use in grid
+computing - a paradigm involving running untrusted, compute bound programs on a
+personal computer \cite{GRID_COMPUTING_INTRO}. The
+filtering mechanism was called \texttt{seccomp}, and its purpose was to
+restrict the set of syscalls that a process could make \cite{arcangeli_seccomp_2005}.
+
+Despite slow initial adoption, with Linus Torvalds famously questioning whether
+anyone actually uses seccomp in 2009 \cite{TORVALDS_ANYONE_USES_SECCOMP}, it is
+widespread today. Android has used it since 8.0 Oreo, Docker containers are
+created with a seccomp filter by default, and FireFox uses it as a means of
+sandboxing content processes \cite{android_seccomp_oreo, docker_seccomp,
+firefox_seccomp}.
+
+Seccomp is invoked with the \texttt{prctl} syscall in one of two modes: strict
+or filter. In strict mode, only three system calls are allowed: \texttt{read},
+\texttt{write}, and \texttt{exit} \cite{MAN_PAGES_SECCOMP}. This is typically
+too strict to be helpful and so the filter mode also exists.
+
+In filter mode, a \ac{bpf} program (plus some metadata) is supplied in the arguments to
+\texttt{prctl}. When a system call occurs, this program is run and its logic
+determines how to handle the system call. 
+
+Seccomp also provides functionality which looks like it might be useful for use in
+\texttt{addrfilter}. From the man pages:
+
+\begin{quote}
+    The instruction\_pointer field provides the address of the machine-
+    language instruction that performed the system call.  This might
+    be useful in conjunction with the use of /proc/pid/maps to perform
+    checks based on which region (mapping) of the program made the
+    system call.  (Probably, it is wise to lock down the mmap(2) and
+    mprotect(2) system calls to prevent the program from subverting
+    such checks.)
+\end{quote}
+
+However, the instruction pointer alone is insufficient for \texttt{addrfilter}'s
+requirements. 
+% TODO: Cite initial eval run results? Include plot here?
+Syscalls are almost always made from \texttt{libc}, which means the instruction
+pointer on syscall entry almost always originates in \texttt{libc}. This doesn't
+provide any useful information on where the system call was made. 
+
+Furthermore, relying on \texttt{/proc/pid/maps} requires added engineering
+effort to avoid \ac{toctou} complications -- clearly, a new solution is needed
+to be able to filter system calls by address space. 
+
+Since seccompBPF doesn't provide all the functionality needed for 
+\texttt{addrfilter}, and is more restrictive than (the already restrictive) 
+\ac{bpf}, it isn't the right tool for implementing the fine-grained system
+call filtering proposed.
+
+To do this, a novel approach is needed. Kernel code will require access to the full
+\ac{bpf} featureset involving interaction with various process-specific data
+structures (e.g. the process's stack, virtual address space, and filesystem).
+
+\subsection{Conclusion}
+
+This chapter has covered background essential to understanding the need for, and
+the design choices behind, \texttt{addrfilter}. Additional information on the
+virtual address space, stack, and filesystem of a process was given. System
+calls were introduced as a means of communication between kernel- and userspace.
+Software compartmentalisation and its relevance to \texttt{addrfilter} was
+discussed, and \ac{bpf} was motivated as the method of choice for writing kernel
+code. 
+
+The next section will combine all of this relevant prerequisite knowledge into a
+high level design for \texttt{addrfilter}.
