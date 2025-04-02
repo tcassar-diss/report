@@ -89,6 +89,8 @@ granularity.
    analysis) and performance overheads when compared to no system call filter
    and the state of the art (`seccomp`)
 
+Provide some numbers in a paragraph afterwards to show solutions
+
 ### Solution
 - Approach the idea of system call filtering from a **software
 compartmentalisation perspective**
@@ -215,10 +217,11 @@ design; prevents tabs from accessing each others' data.
 - Pain to configure
     - Happens via `prctl` syscall
 
-### Processes
+### Processes (maybe inline these descriptions where they first appear)
+- Illustrate the stack: need a schema for stack unwinding
 - Processes provide strong "_inter-application_" isolation
 
-#### Address Space 
+#### Address Space (inline)
 - Statically vs Dynamically linked executables
 - Understanding `/proc/pid/maps`: human-parsable representation of a process's
 virtual address space 
@@ -226,7 +229,7 @@ virtual address space
     - `vma_struct` red black tree
     - `file` struct
 
-#### Process's stack
+#### Process's stack (inline)
 - Each process has its own stack
 - Relevant parts of stack frame
     - RP added on a function call; can therefore use stack to "_trace a path_"
@@ -264,6 +267,15 @@ trying to escalate privilege
 - The attacker does not have root access
 
 ### Solution Architecture
+- TODO: Ask what counts as the solution?
+    - `addrfilter`: will add the tracepoint which builds the whitelist as part
+      of the solution
+    - Present as two seperate tools: also put a word on the evaluation tool in
+    the design section
+    - Diagrams: make more like actual computers
+        - Label address 0, label 256Tb, zoom in on userspace; figure as virtual
+          address space
+
 
 ### User configuration
 - launch vs attach
@@ -507,6 +519,11 @@ vma walking portion of `addrfilter`
     - More research needed to identify problem source
 
 ## Related Works
+
+- Justify the novelty of your approach
+- Describe the state of the art
+- Show why `addrfilter` is novel
+
 - SysPart: temporal filtering of syscalls
 - Eternal War in Memory SoK
 - Work on automating syscall whitelist generation
@@ -530,3 +547,10 @@ binaries
 - Static analysis for per-library whitelist generation
 - Further investigation into Docker and `bpf_get_stack` incomatibility
     - Given widespread docker use, a good idea
+
+## Conclusion
+- Paraphrase the abstract
+- Recontextualise the problem; state the problem again
+- Describe conclusion, give some numbers
+
+- TODO: check blackboard and tick all the boxes on blackboard

@@ -52,3 +52,16 @@
 - Important: how parameterisable is your tool? Less important is how to set them
 - Focus should be on _reproducibility_: what does someone need to know if they
 were to reimplement your code?
+
+
+---
+## Minutes 01/04/2025
+
+- Things should flow: style written probably okay
+- Design
+    - 
+
+
+
+
+
