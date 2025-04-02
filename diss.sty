@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage[a4paper, total={6in, 9in}]{geometry}
 \usepackage{graphicx} 
+\usepackage{acro}
 \usepackage{cite}
 \usepackage[hidelinks]{hyperref}
 \usepackage{adjustbox}
@@ -17,6 +18,11 @@
 \definecolor{deepnavy}{RGB}{59, 40, 150}
 \definecolor{mutedsage}{RGB}{25, 114, 120}
 \definecolor{warmterracotta}{RGB}{193, 41, 46}
+
+\usepackage[english]{babel}
+\usepackage{setspace}
+\usepackage{etoolbox}
+\AtBeginEnvironment{quote}{\par\singlespacing\small}
 
 \let\oldphi\phi
 \renewcommand{\phi}{\varphi}
@@ -41,3 +47,51 @@
 \addtolength{\topmargin}{-.5in}
 \addtolength{\textheight}{1.0in}
 
+
+% Acronyms and abbreviations
+% TODO: Rename section as acronyms and abbreviations
+
+\DeclareAcronym{API}{
+    short=API,
+    long=Application Programming Interface,
+}
+
+\DeclareAcronym{CPU}{
+    short=CPU,
+    long=Central Processing Unit,
+}
+
+\DeclareAcronym{bpf}{
+    short=eBPF,
+    long= The Extended Berkley Packet Filter,
+}
+
+\DeclareAcronym{I/O}{
+    short = I/O,
+    long = Input/Output,
+}
+
+\DeclareAcronym{OS}{ 
+    short = OS,
+    long = Operating System,
+}
+
+\DeclareAcronym{syscall}{
+    short = syscall,
+    long = System Call,
+}
+
+\DeclareAcronym{xdp}{
+    short = XDP,
+    long = Express Data Path
+}
+
+\DeclareAcronym{lsm}{
+    short = LSMs,
+    long = Linux Security Modules
+}
+
+\DeclareAcronym{toctou} {
+    short=TOCTOU,
+    long = {Time of Check, Time of Use}
+}
