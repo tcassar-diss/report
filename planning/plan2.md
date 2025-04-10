@@ -104,6 +104,170 @@ TODO: replan on rewrite!
 > **SECTION PURPOSE**: Justify requirements, argue that `addrfilter` is the
 > simplest product which will fulfil these requirements.
 
+- System security project; each loc => increased attack surface, increased
+  maintenance
+- Care was taken to design the **simplest possible application** which would
+  achieve the objective: filter syscalls by address space.
+- Caveat: needs to be performant!
+
+- Approach taken was to
+  - Formalise a **threat model**
+  - Use the threat model to inform **requirements**
+  - Design the simplest possible application that will fulfil requirements
+    while being performant.
+
+### Threat Model
+
+- Attacker has an RCE via the filtered application
+- Attacker doesn't have root privileges (`SYS_CAP_ADMIN`)
+- System has a form of compartmentalisation implemented (otherwise attacker can
+  use RoP to jump to a part of the address space where their syscall is allowed;
+  thus, reducing `addrfilter` to a slower `seccomp `filter)
+
+### Main Requirements
+
+1. `addrfilter` should detect when an application makes a disallowed syscall and
+   take _"appropriate action"_.
+2. The user should be able to configure the _"appropriate action"_ to be either
+   killing the process, warning, or killing all filtered processes.
+3. `addrfilter` should take a **default deny** approach to filtering, with the
+   user able to **explicitly allow** which system calls be made (whitelists).
+4. The user should be able to specify whitelists for each shared library, defined
+   as any file-backed region of a processes VMA.
+5. `addrfilter` should significantly reduce the set of dangerous system calls
+   that an attacker compromising a compartment has access to in a way that does not
+   detrimentally impact application performance.
+
+The evaluation section shows that redis sees a 37.0% privilege reduction
+compared to seccomp, at an average slowdown of ~20%.
+
+### Corollary Requirements
+
+These requirements are not alone by themselves. Developers don't readily know
+which system calls their application makes, let alone which syscall compartments
+make. Therefore, there is an important corollary requirement: **whitelist
+generation**.
+
+6. `addrfilter` should provide automated tooling to generate precise
+   per-compartment whitelists.
+
+Furthermore, there are no standard metrics which quantify the idea of
+system call privilege, so to be able to reason about privilege reduction, this
+also needs defining.
+
+7. A metric needs to be defined and justified which enables reasoning about the
+   privilege some set of system calls affords an attacker.
+8. Automated tooling needs to be developed which will give the developer
+   information about the extent of privilege reduction they could see from using
+   addrfilter.
+
+While care will be taken to use a broad, applicable range of benchmarks in the
+evaluation phase, whether `addrfilter` is suitable will always depend on the
+developer's **actual** use case. Therefor, it's important to provide some key
+indicators of slowdown.
+
+8. Provide a metric which gives a rough indication of performance penalties.
+   This isn't intended to be used as a ground truth, but merely as an indication
+   about whether `addrfilter` is right for the given use case.
+
+Having now codified the threat model and requirements, we propose an overview of
+the design. The design is able to fulfil all the main requirements: tooling from
+the corollary requirements will be discussed after the design of `addrfilter`.
+
+### Design overview
+
+TODO: diagram
+
+- Core sections
+
+  - Frontend: CLI, attaches the filter to running apps; warns user, kills other
+    processes in follow map.
+  - BPF Maps/ringbufs: used for communication between userspace and the
+    kernelspace filtering program
+  - Backend: the **tracepoint** which is run on each system call. This is the
+    filtering machinery
+
+- Main tracepoint flow
+  - Flowchart: main function from tracepoint
+
+```c
+SEC("raw_tp/sys_enter")
+int addrfilter(struct bpf_raw_tracepoint_args *ctx) {
+  record_stat(TP_ENTERED);
+
+  u64 rp = 0;
+  pid_t pid;
+
+  struct task_struct *task;
+  u64 syscall_nr = ctx->args[1];
+
+  task = bpf_get_current_task_btf();
+  if (!task) {
+    record_stat(GET_CUR_TASK_FAILED);
+    return 1;
+  }
+
+  if (bpf_probe_read(&pid, sizeof(pid), &task->tgid) != 0) {
+    record_stat(PID_READ_FAILED);
+    CALL_PROF_DISCARD(prof);
+    return false;
+  }
+
+  if (!apply_filter(task, pid)) {
+    record_stat(IGNORE_PID);
+    CALL_PROF_DISCARD(prof);
+    return 0;
+  }
+
+  if (find_syscall_site(ctx, &rp, pid) != 0) {
+    return -1;
+  }
+
+  struct memory_filename mem_filename = {};
+  if (assign_filename(task, rp, &mem_filename) != 0) {
+    return -1;
+  }
+
+  struct syscall_whitelist *whitelist;
+  whitelist = (struct syscall_whitelist *)bpf_map_lookup_elem(
+      &path_whitelist_map, &mem_filename.d_iname);
+
+  if (!whitelist) {
+    record_stat(WHITELIST_MISSING);
+    return 0;
+  }
+
+  if (check_whitelist_field(whitelist, syscall_nr) == 1) {
+    return 0;
+  }
+
+  record_stat(SYSCALL_BLOCKED);
+
+  filter(pid);
+
+  return 0;
+}
+```
+
+### Design Tradeoffs
+
+- `libc` is fixed
+  - Assume that `libc` does not change
+  - Wouldn't be difficult to remove this assumption, but adds complexity
+  - In the real world, the libc address hardly ever changes during program
+    execution, although it is technically possible
+  - To account for this, a new tracepoint would be made and hooked into
+    mmap/munmap.
+  - The tracepoint would then check the args to mmap/munmap and update any
+    changes to the libc address space map
+- `addrfilter` was designed to keep the libc address space in a map in case
+  this functionality was needed later; at the moment, libc is loaded before
+  the tracepoint using information from /proc/pid/maps. This was done as in
+  testing, libc never changed so for simplicity, this feature wasn't built
+
+The next section discusses how this design is implemented in reproducible
+detail.
+
 ## Implementation
 
 > **SECTION PURPOSE**: Give the reader a detailed enough decription of the
