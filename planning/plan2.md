@@ -88,7 +88,16 @@
 
 TODO: replan on rewrite!
 
+- Syscalls
+- Compartmentalisation and why its relevant
+- BPF
+- Seccomp
+
 ### Bridge to design
+
+- We’ve now seen why syscall filtering is necessary, how it’s currently done, and where existing solutions fall short.
+- These limitations directly informed the design goals of `addrfilter`.
+- The next section explains how these challenges were addressed through a focused, minimalistic, and precise design.
 
 ## Design
 
