@@ -118,6 +118,15 @@ TODO: replan on rewrite!
 > - Performance goals
 > - Syscall frequency: indicator of slowdown
 
+### Bridge to Related Works
+
+- Demonstrated that `addrfilter` is an effective solution for syscall filtering
+  in its own right.
+- `addrfilter` is also a timely and relevant contribution to ongoing research in
+  syscall filtering and software compartmentalisation.
+- The next section places `addrfilter` within this broader context, showing how
+  it advances the state of the art in both novelty and utility.
+
 ## Related Works
 
 > **SECTION PURPOSE**: Argue that `addrfilter` is **novel**; show where it fits
@@ -127,3 +136,24 @@ TODO: replan on rewrite!
 
 **SECTION PURPOSE**: Talk about what `addrfilter` has achieved and what still
 needs doing.
+
+- Shown that `addrfilter` is
+  - Novel
+  - Relevant
+  - Functional
+  - Performant
+- Shown via rigorous evaluation strategy
+  - Range of benchmarks looking at different aspects of system performance
+  - Compared to a base system as well as seccomp
+  - Stress-tested `addrfilter` to find usecases where it isn't appropriate.
+- Categorised the types of systems and applications where `addrfilter` is most
+  appropriate
+- Provided automated tooling to support the uptake of `addrfilter` with little
+  effort among developers.
+- Avenues for future work:
+  - Reducing the cost of finding the syscall site
+  - Static analysis tooling for whitelist generation
+  - Expanding compatibility with other kernels and CPU architectures.
+    (e.g. `pt_regs` on Arm: bad idea!)
+    -Takeaway - Dynamic application, system with compartmentalisation primitives,
+    high-security/low syscall-rate application => favour `addrfilter` over `seccomp`
