@@ -1,1 +1,30 @@
 \section{Evaluation}
+
+In this section, we show that using addrfilter over seccomp
+results in a more secure application with minimal performance penalties. We
+look to answer two questions:
+
+\begin{enumerate}
+    \item What degree of \textbf{privilege reduction} does addrfilter
+        provide when compared to seccomp?
+    \item How much does using addrfilter cost in terms of application
+        slowdown?
+\end{enumerate}
+
+The evaluation presented here is as rigorous as possible. For each
+experiment, data was gathered on an unfiltered application, a seccomp-filtered 
+application, and an addrfilter-filtered application. This provides relative 
+comparisons with the state of the art as well as absolute comparisons with a
+baseline. %XXX: GIVE SOME NUMBERS
+
+After running a broad range of benchmarks, we were able to determine that 
+system call frequency was the best indicator of application slowdown. Using 
+this information, we stressed addrfilter to see how bad the slowdown could
+become. We augmented addrfilter with profiling information to determine system
+bottlenecks see if a speedup was possible.
+
+A new analysis tool was created: \texttt{syso}. \texttt{syso} gives information
+about the number of system calls an application makes, as well as which
+libraries are making which system calls. This allows 
+
+\subsection{Test Environment}

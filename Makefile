@@ -9,3 +9,7 @@ clean:
 
 spell:
 	aspell -c -t 
+
+count: SHELL:=/bin/bash
+count:
+	 @texcount $(shell find . -name '*.tex')

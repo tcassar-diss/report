@@ -1,5 +1,5 @@
-structure.md
 *.pdf
+.DS_Store
 
 # Provided by 
 #    https://github.com/github/gitignore/blob/main/TeX.gitignore

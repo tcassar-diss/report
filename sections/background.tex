@@ -20,31 +20,39 @@ of the \textbf{process} and \textbf{kernel} is provided here.
 
 At the core of system call filtering is the concept of a \textbf{process}. A
 process can be loosely thought of as an application - more concretely, it is an
-\textit{instance of an executing program} \cite{LINUX_PROGRAMMING_INTERFACE}.
+\textit{instance of an executing program} \cite{LINUX_PROGRAMMING_INTERFACE}. A
+system call filter is applied to a process and requires some of the process's
+key constructs to work. These constructs are discussed here: the \textit{virtual
+memory area}, and \textit{the process stack}.
 
-% Mini paragraph on the stack
-    % Process has its own stack; used to manage functions and control flow
-    % Stack is composed of _stack frames_; include **return pointers**
-    % To analyse the code path which resulted in a system call, we can 
-    % **unwind the stack**
+Each process needs to access memory in a way that is isolated from every other
+process running on the host machine. This isolation is achieved through the
+concept of \textbf{virtual memory}.
 
-% The return pointers of the stack are virtual memory addresses, pointing to
-% some space in the process's vma (.text section is loaded at runtime by the
-% loader). 
+Each process has access to its own isolated section of memory, which appears
+contiguous to the process. The process's \ac{vma} starts from address 0 and
+contains 256TB worth of memory addresses. In reality, only a small fraction of
+this is actually mapped to physical memory. 
 
-% In a dynamically linked executable, shared libraries will be mapped
-% into different regions of memory. They are file backed, and their originating
-% file is stored in the `vma_struct`. By inspecting the process's virtual
-% memory, it is possible to identify the shared library file which triggered a
-% system call.
+A process's \ac{vma} is broken down into several conceptual parts: the two
+most relevant to \texttt{addrfilter} are the stack and \textit{file backed
+memory regions}.
 
-% “By inspecting the process's stack and memory layout, it becomes possible to attribute syscalls to specific shared libraries or code regions — a capability which forms the basis for addrfilter's filtering strategy.”
+The stack is a data structure used to support the implementation of function
+calls. When a function is called, a \textbf{stack frame} is pushed to the
+stack. This contains things like local variables, return variables, and
+return pointers. Return pointers are used by \texttt{addrfilter} to help
+determine which shared library file made a system call.
 
+\texttt{addrfilter} also relies on the concept of file-backed memory regions 
+to do this. File backed memory regions appear when a file was used to populate
+part of a process's \ac{vma}. This is commonly seen with dynamically linked
+executables: a \texttt{.so} file will be used to populate part of the
+process's \ac{vma}. The original filepath is maintained in kernel metadata and
+can be accessed by inspecting the \texttt{vma\_struct} data structure.
 
-
-%TODO:
-% Diagram visualising stack and undwinding with return pointers
-% Diagram visualising process's VMA
+The metadata about files is stored in the kernel: a key concept in Linux-based
+operating systems. The next section discusses the kernel in more detail.
 
 \subsubsection{The Linux Kernel}
 Operating systems have two modes, or \textit{worlds}, associated with them: user
