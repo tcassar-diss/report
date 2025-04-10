@@ -27,13 +27,68 @@
 >
 > - What does `addrfilter` do?
 > - Why is `addrfilter` needed?
+> - Preliminary findings: how well does `addrfilter` perform versus alternatives
 > - How was `addrfilter` implemented?
-> - How well does `addrfilter` perform versus alternatives
+
+### What is `addrfilter`
+
+- Security tooling built for Linux based on a **novel approach**
+- Will kill an application if it makes a **system call** it isn't allowed to
+  make.
+- Novel approach: fine-grained filtering based on **process address space**
+
+### Why is syscall filtering needed?
+
+- Bring up that state of the art is `seccomp`!
+- Seccomp defines one global filter for an application.
+- Applications are getting constantly bigger in terms of LoCs
+
+  - => (legitimately) needs access to more system calls
+  - => seccomp filters must be more permissive, therefore less restrictive
+
+- TODO: find real world exploit
+
+### Does `addrfilter` work?
+
+- Yes. Depending on what you're doing, its probably the sensible choice over
+  `seccomp`.
+- Designed for **compartmentalised systems**; compartmentalisation breaks the
+  process into individual segments called compartments. If an attacker compromises
+  an application, they are confined to the compartment they compromised.
+
+- Redis sees a 37.0% privilege reduction (forward ref. evaluation section),
+  nginx sees 23.7%, whereas seccomp only shows X% and Y% respectively.
+- Results of a worst-case stress test showed a 40% reduction in throughput in a
+  Redis microbenchmark, with seccomp showing a Z% reduction. (Mean slowdown over
+  the whole suite was A%).
+
+### How does `addrfilter` work?
+
+- High level
+- Reference core idea of syscall filtering
+- Bring in **process address spaces**: `addrfilter` defines a syscall whitelist
+  for shared libraries!
+- Results in smaller, more precise filters and therefore a **more secure**
+  application!
+- (Because different libraries tend to serve isolated purposes, `addrfilter`
+  can enforce syscall policies more precisely).
+
+### Bridge to background
+
+- `addrfilter` is a complex systems security project which required an in-depth
+  understanding of the Linux Kernel to implement.
+- The next section summarises the **key background knowledge needed** to
+  understand the need for, design of, and evaluation strategy behind `addrfilter`.
+- Key topics include BPF, seccomp, memory layout, and syscall dispatch.
 
 ## Background
 
 > **SECTION PURPOSE**: Introduce the reader to concepts they need to understand
 > to understand `addrfilter`; show that existing solutions are outdated
+
+TODO: replan on rewrite!
+
+### Bridge to design
 
 ## Design
 
