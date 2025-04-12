@@ -184,7 +184,7 @@ TODO: diagram
     processes in follow map.
   - BPF Maps/ringbufs: used for communication between userspace and the
     kernelspace filtering program
-  - Backend: the **tracepoint** which is run on each system call. This is the
+  - Backend: the **tracepoint** is run on each system call. This is the
     filtering machinery
 
 - Main tracepoint flow
@@ -292,6 +292,81 @@ detail.
   it advances the state of the art in both novelty and utility.
 
 ## Related Works
+
+### The state of **system call filtering**
+
+#### Works motivating system call filtering
+
+- Early approaches involved user-mode techniques; e.g. tracing `/proc`.
+- **Janus**: early (1999) influential hybrid scheme, leveraged `ptrace`
+  (addrfilter also leverages ptrace to an extent (`pt_regs`))
+- Systrace: userspace/kernelspace hybrid syscall filter; gave the user a lot of
+  control over policies, including features like UID-specific allow lists.
+
+#### The challenge: building whitelists
+
+- Gold standard: static analysis
+
+  - SysFilter
+  - BSide
+  - SA issue with addrfilter: no tooling exists atm; lots of engineering effort
+    to do. Not as simple as taking the intersection of main binary syscalls and
+    shared library syscalls!
+
+- Dynamic analysis:
+  - Not a gold standard
+  - Unsuitable for a production use case
+  - However, **good enough** to prove the efficacy of `addrfilter` (orthogonal)
+  - Used in papers in well-renowned conferences (e.g. made up part of SysPart)
+
+#### Novel Syscall Filtering Implementations
+
+- Syspart: a different take on a "fine grained" approach
+
+  - Idea is that server applications exhibit different set of syscalls on
+    startup vs during steady state
+  - Syspart builds on other works [list...]
+
+- SysXCHG: dynamically swap syscall lists based on `execve`; restrict privileges
+  of child processes!
+
+- Optimus (2024): further isolate containers from hosts by introducing a runtime
+  filtering policy
+
+- A lot of work looking at application of principle of least privilege;
+  - Work doesn't link itself to **software compartmentalisation**, but
+    addrfilter does
+
+#### Software Compartmentalisation
+
+- Software: application of principle of least privilege (Saltzer JH, Schroeder MD)
+- Backends
+  - CHERI capabilities (Arm Morello, CheriBSD)
+  - IntelMPKs
+- Applications
+
+  - Containing memory saftey issues (Tolerating Malicious Device Drivers in Linux)
+  - Sandboxing untrusted third parties (SoK: Lessons Learned from Android Security)
+  - Sandboxing unsafe part of languages (Intra-Unikernel Isolation with Intel
+    Memory Protection Keys)
+  - Thwarting supply-chain attacks (BreakApp) and side-channels (Mitigating
+    Information Leakage Vulnerabilities) ,
+
+- Intersection with applications of syscall filtering; therefore, sensible to describe
+  syscall filtering as part of the wider paradigm.
+- Furthermore, describing as part of the paradigm makes connections to previous
+  works easier to see; combining syscall filtering with something like CheriBSD
+  allows for the design of systems like addrfilter.
+
+#### Justifying that addrfilter is novel
+
+- Seen the state of the art in syscall filtering: no one has explicitly
+  restricted by address space
+- Addrfilter is relevant: obvious trend in the literature to look at tightening
+  syscall lists (SysXCHG, SysPart)
+- Addrfilter has a unique place in explicitly bridging the gap between software
+  compartmentalisation and system call filtering, providing something new to the
+  research community.
 
 > **SECTION PURPOSE**: Argue that `addrfilter` is **novel**; show where it fits
 > within state of the art.
