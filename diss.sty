@@ -5,11 +5,17 @@
 \usepackage[a4paper, total={6in, 9in}]{geometry}
 \usepackage{graphicx} 
 \usepackage{acro}
-
 \usepackage[hyphens]{url}
 \urlstyle{same}
 
-\usepackage{cite}
+% \usepackage[parfill]{parskip}
+\usepackage{caption}
+\usepackage{titling}
+\renewcommand\maketitlehooka{\vspace*{0.15\textheight}} 
+\renewcommand\maketitlehookd{\vfill\null}
+\usepackage{array}
+\usepackage{biblatex}
+\addbibresource{main.bib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{adjustbox}
 \usepackage[dvipsnames]{xcolor}
@@ -55,14 +61,30 @@
 
 
 % Acronyms and abbreviations
-% TODO: Rename section as acronyms and abbreviations
+\NewAcroCommand\acg{m}{\acropossessive\UseAcroTemplate{first}{#1}}
+\NewAcroCommand\acsg{m}{\acropossessive\UseAcroTemplate{short}{#1}}
+\NewAcroCommand\aclg{m}{\acropossessive\UseAcroTemplate{long}{#1}}
 
-\DeclareAcronym{API}{
+\NewAcroCommand\acfg{m}{
+    \acrofull
+    \acropossessive
+    \UseAcroTemplate{first}{#1}
+}
+
+\NewAcroCommand\iacsg{m}{
+    \acroindefinite
+    \acropossessive
+    \UseAcroTemplate{short}{#1}
+}
+
+\DeclareAcroEnding{possessive}{'s}{'s}
+
+\DeclareAcronym{api}{
     short=API,
     long=Application Programming Interface,
 }
 
-\DeclareAcronym{CPU}{
+\DeclareAcronym{cpu}{
     short=CPU,
     long=Central Processing Unit,
 }
@@ -72,12 +94,13 @@
     long= The Extended Berkley Packet Filter,
 }
 
-\DeclareAcronym{I/O}{
+\DeclareAcronym{io}{
     short = I/O,
     long = Input/Output,
+    short-indefinite = {an}
 }
 
-\DeclareAcronym{OS}{ 
+\DeclareAcronym{os}{ 
     short = OS,
     long = Operating System,
 }
@@ -93,8 +116,8 @@
 }
 
 \DeclareAcronym{lsm}{
-    short = LSMs,
-    long = Linux Security Modules
+    short = LSM,
+    long = Linux Security Module
 }
 
 \DeclareAcronym{toctou} {
@@ -116,3 +139,27 @@
     short={RCE},
     long=Remote Code Execution
 }
+
+\DeclareAcronym{aslr} {
+    short = ASLR,
+    long = Address Space Layout Randomisation
+}
+
+\DeclareAcronym{k8s} {
+    short = k8s,
+    long = Kubernetes
+}
+
+
+\DeclareAcronym{ltp} {
+    short = LTP,
+    long = Linux Test Project
+}
+
+\DeclareAcronym{npb} {
+    short = NPB,
+    long = NASA Parallel Benchmark,
+    short-indefinite = an
+}
+
+

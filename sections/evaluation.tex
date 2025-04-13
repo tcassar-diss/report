@@ -1,30 +1,132 @@
 \section{Evaluation}
 
-In this section, we show that using addrfilter over seccomp
-results in a more secure application with minimal performance penalties. We
-look to answer two questions:
+In this section we show that addrfilter provides security advantages when
+compared to seccomp at a reasonable runtime cost. 
 
-\begin{enumerate}
-    \item What degree of \textbf{privilege reduction} does addrfilter
-        provide when compared to seccomp?
-    \item How much does using addrfilter cost in terms of application
-        slowdown?
-\end{enumerate}
-
-The evaluation presented here is as rigorous as possible. For each
-experiment, data was gathered on an unfiltered application, a seccomp-filtered 
-application, and an addrfilter-filtered application. This provides relative 
-comparisons with the state of the art as well as absolute comparisons with a
-baseline. %XXX: GIVE SOME NUMBERS
-
-After running a broad range of benchmarks, we were able to determine that 
-system call frequency was the best indicator of application slowdown. Using 
-this information, we stressed addrfilter to see how bad the slowdown could
-become. We augmented addrfilter with profiling information to determine system
-bottlenecks see if a speedup was possible.
-
-A new analysis tool was created: \texttt{syso}. \texttt{syso} gives information
-about the number of system calls an application makes, as well as which
-libraries are making which system calls. This allows 
+Our strategy is to take a suite of benchmarks and calculate the
+\textit{privilege reduction} that addrfilter provides over seccomp. We also
+compare the benchmarks' slowdown across each filtering strategy and reason that
+an application's \textit{syscall frequency} is the best predictor of slowdown. 
 
 \subsection{Test Environment}
+
+An Ubuntu 24.04 server, morningrise, with Linux kernel version
+6.8.0-52-generic was used for development and testing. 
+Morningrise is equipped with two Intel(R) Xeon(R) Gold 5220R x86 processors
+clocked at 2.20GHz. Each socket has 24 physical cores with two threads per
+core, resulting in a total of 96 cores.
+
+Morningrise has 64 GB of memory configured at 2666 MT/s  with 2 terabytes
+of storage supporting buffered reads at 515 MB/s,
+measured with \texttt{sudo hdparm -t /dev/sda}.
+
+The kernel is being run with out-of-the-box settings - \ac{aslr}, stack
+canaries, and other default security features remained enabled for all tests.
+addrfilter was run as root, but care was taken to launch the filtered
+application with restricted privileges.
+
+addrfilter was compiled with the Go compiler at version 1.23.2 with no flags or
+environment variables explicitly set.\ac{bpf} was
+compiled using the \texttt{ebpf-go} toolchain from the Cilium project at version
+v0.17.1. Under the hood, this relies on LLVM: morningrise was configured with
+clang version 18.1.3. 
+
+For experiments involving data transfer over a network (such as
+\texttt{redis-benchmark}, \texttt{wrk} for nginx), the server and benchmark
+client were both run on morningrise to avoid the network becoming a bottleneck.
+
+While experiments were performed on server-grade hardware, the results should be
+generalisable to user-oriented systems. Benchmark results are always reported
+with addrfilter enabled and disabled to help the reader understand relative
+performance differences.
+
+\subsection{Benchmark Selection}
+
+% TODO: cite
+%    - Redis in memory kv store
+%    - K8s used in production for orchestrated deployments
+
+Five benchmarks were selected to evaluate addrfilter for security and
+performance. These were \texttt{wrk} for nginx, \texttt{redis-benchmark} for
+redis, \texttt{fio} to measure filesystem performance, and \texttt{kube-burner}
+for \ac{k8s}. 
+
+These benchmarks are representative of typical server applications.
+\texttt{redis-benchmark} and \texttt{wrk} appear in recent syscall
+literature and are included to aid comparison with other novel filtering
+frameworks \cite{OPTIMUS, SYSPART, SYSFILTER}. \texttt{fio} is used to
+measure filesystem performance, and \texttt{kube-burner} is used to 
+measure the performance of \ac{k8s} - an incredibly common service in 
+production code. 
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ccr}
+        \toprule
+        Benchmark & OS Subsystem & Syscall Frequency (K/s) \\
+        \midrule
+        \texttt{redis-bench} & Memory & 577 \\
+        \texttt{wrk} & Network & TODO \\
+        \texttt{fio} & Filesystem & TODO \\
+        \texttt{kube-burner} & Orchestration & TODO \\
+        \texttt{NPB-OMP} & \ac{cpu} & TODO \\
+    \end{tabular}
+    \caption{List of benchmarks and the OS subsystem they
+    stress}\label{table:benchmark-selection}
+\end{table}
+
+Table \ref{table:benchmark-selection} summarises which \ac{os}
+subsystems and functionalities each benchmark stresses and provides the system call frequency of each
+benchmark (unfiltered). As discussed in Section \ref{subsubsec:slowdown}, system
+call frequency is a good predictor of slowdown. Here, subsystem can refer to how
+the \ac{os} interacts with some physical hardware (e.g. memory), or something
+more abstract e.g. orchestration. The \textit{orchestration} subsystem here
+refers to features of the \ac{os} used in orchestration e.g. cgroups,
+namespaces, interaction with iptables, etc.
+
+% TODO: cite cgroups, namespaces, iptables in orchestration
+
+\subsection{Validation}
+
+To validate that addrfilter works correctly a combination of strategies were
+used. Manual testing on simple \textit{"Hello, World"} style applications was
+used extensively in development to ensure that the filtered application was
+killed when it made a non-whitelisted syscall. Once addrfilter was showing
+correct behaviour in development, it was tested on real applications.
+
+%TODO: cite dynamic analysis => incomplete whitelist generation
+We used addrfilter's \texttt{generate} functionality to create system call
+whitelists via dynamic analysis for each of the benchmarked applications.
+Since dynamic analysis can lead to incomplete whitelists, we ran each benchmark
+ten times with addrfilter enabled and made sure that no unexpected syscalls were
+made. We then manually removed some system calls from the generated whitelist and
+ensured that this lead to the app being killed.
+
+
+% TODO: Cite linux test project
+Having showed that the filtering functionality was effective, we then ensured
+that system call behaviour hadn't been affected by addrfilter. To do this, we
+turned to the \acg{ltp} syscall test suite. \ac{ltp} was installed according to
+the
+\href{https://linux-test-project.readthedocs.io/en/latest/users/quick_start.html}{documentation}.
+
+We ran the syscall test suite using the command \texttt{/opt/ltp/kirk -f ltp -r
+syscalls} with no filtering enabled for some baseline results. We then ran
+\texttt{addrfilter generate /opt/ltp/kirk ...} to generate the relevant
+whitelists. We supplied this whitelist as an argument to addrfilter, and ran
+\texttt{addrfilter ./whitelist.json /opt/ltp/kirk ...} to run the test suite
+with addrfilter enabled. The test results during whitelist generation and with
+filtering enabled were identical to the baseline tests, showing that \textbf{addrfilter
+has no adverse effects on system call correctness}.
+
+\subsection{Security Evaluation}
+
+Having shown the correctness of addrfilter and justified the suite of benchmarks
+we want to use, we can begin to reason about the \textbf{security improvements}
+that addrfilter provides.
+
+\subsection{Performance Evaluation}\label{subsec:perf-eval}
+
+\subsubsection{Profiling}
+
+\subsubsection{What causes slowdown}\label{subsubsec:slowdown}

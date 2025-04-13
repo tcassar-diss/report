@@ -57,7 +57,7 @@ operating systems. The next section discusses the kernel in more detail.
 \subsubsection{The Linux Kernel}
 Operating systems have two modes, or \textit{worlds}, associated with them: user
 mode and kernel mode. User mode, or userspace, is designed to run untrusted 
-applications. There is no direct access to hardware, I/O devices, or the 
+applications. There is no direct access to hardware, \ac{io} devices, or the 
 network from userspace.
 
 Kernel mode, or kernelspace, on the other hand, is a more privileged environment
@@ -75,16 +75,17 @@ is via \textbf{system calls}.
 
 When an application running in userspace wants to access hardware - for example,
 to request a page in memory - it issues a \textbf{system call} (or syscall). System calls
-form an \ac{API} which allows userspace programs to ask the kernel to complete some
+form an \ac{api} which allows userspace programs to ask the kernel to complete some
 task, and return the result back to userspace.
 
+S
 In the case of requesting a memory page, the userspace application will make a
-call to \texttt{mmap()} from the \ac{OS}'s C standard library (e.g. \texttt{libc}).
+call to \texttt{mmap()} from the \acfg{os} C standard library (e.g. \texttt{libc}).
 This triggers a \textit{world switch}: the process of changing the hardware
 to/from kernel mode.
 
 A world switch is a costly operation, involving flushing any virtually mapped
-caches and copying all the contents of all \ac{CPU} registers to the user stack. This
+caches and copying all the contents of all \ac{cpu} registers to the user stack. This
 is done to ensure a strict separation between kernelspace and userspace, and to
 make sure that the userspace process can continue running as usual after the
 syscall.
@@ -157,7 +158,7 @@ Despite being designed as observability tooling, \ac{bpf} is increasingly being
 used for security applications such as mitigating SPECTRE
 \cite{SPECTRE_BPF_MITIGATION} or dropping carefully-crafted packets that can
 lead to an exploit in kernel \cite{BPF_PACKET_MITIGATION}. Integration with
-\ac{lsm} has been added as part of a suite of security tools for \ac{bpf}
+\acp{lsm} has been added as part of a suite of security tools for \ac{bpf}
 \cite{StarovoitovBPFSecurity}, which
 shows there is precedent for using \ac{bpf} as security tooling. Furthermore,
 seccompBPF is an extension of the existing seccomp which can define a custom

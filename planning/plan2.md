@@ -19,15 +19,16 @@
 - List of Acronyms and Abbreviations
 - List of Tables
 - List of Figures
-- Abstract
+- Abstract (200 words)
 
-## Introduction
+## Introduction (1000 words)
 
 > **SECTION PURPOSE**: Convince the reader that addrfilter is needed
 >
 > - What does `addrfilter` do?
 > - Why is `addrfilter` needed?
 > - Preliminary findings: how well does `addrfilter` perform versus alternatives
+>   - Provide table of results
 > - How was `addrfilter` implemented?
 
 ### What is `addrfilter`
@@ -50,7 +51,13 @@
 
 ### Does `addrfilter` work?
 
-- Yes. Depending on what you're doing, its probably the sensible choice over
+- Addrfilter shows promising results
+  - Redis sees a 37.0% privilege reduction (forward ref. evaluation section),
+    nginx sees 23.7%, whereas seccomp only shows X% and Y% respectively.
+  - Results of a worst-case stress test showed a 40% reduction in throughput in a
+    Redis microbenchmark, with seccomp showing a Z% reduction. (Mean slowdown over
+    the whole suite was A%).
+- Depending on what you're doing, its probably the sensible choice over
   `seccomp`.
 - Designed for **compartmentalised systems**; compartmentalisation breaks the
   process into individual segments called compartments. If an attacker compromises
@@ -81,7 +88,7 @@
   understand the need for, design of, and evaluation strategy behind `addrfilter`.
 - Key topics include BPF, seccomp, memory layout, and syscall dispatch.
 
-## Background
+## Background (1800) words
 
 > **SECTION PURPOSE**: Introduce the reader to concepts they need to understand
 > to understand `addrfilter`; show that existing solutions are outdated
@@ -99,7 +106,7 @@ TODO: replan on rewrite!
 - These limitations directly informed the design goals of `addrfilter`.
 - The next section explains how these challenges were addressed through a focused, minimalistic, and precise design.
 
-## Design
+## Design (1500 words)
 
 > **SECTION PURPOSE**: Justify requirements, argue that `addrfilter` is the
 > simplest product which will fulfil these requirements.
@@ -268,12 +275,49 @@ int addrfilter(struct bpf_raw_tracepoint_args *ctx) {
 The next section discusses how this design is implemented in reproducible
 detail.
 
-## Implementation
+## Implementation (1500 words)
 
 > **SECTION PURPOSE**: Give the reader a detailed enough decription of the
 > system for reimplementation.
 
-## Evaluation
+Unlike the design phase, implementing addrfilter was not done in discrete
+stages. A key design choice was to use eBPF - a challenging programming language
+to develop in due to its highly restrictive nature. The lack of accessible
+documentation for eBPF added to these challenges and necessitated a more
+iterative approach to implementation.
+
+As such, this section is not structured in chronological order: it starts with
+an outline
+
+### Technologies used
+
+- BPF
+  - Ability to write kernel code in a formally verified, safe environment
+  - Doesn't require patching the kernel: improves development speed, transparent
+    uptake for developers
+- Go
+  - Need for concurrency support in userspace (reading ringbufs)
+  - No need for fine hardware control in userspace; do need access to
+    simple iteration, good interfacing with bpf
+  - `context.Context` pattern suited to handling long-lived tasks such as
+    filtering
+  - Go is not normally thought of as a systems programming language; however,
+    the Go service won't be doing anything systems level: only interfacing with
+    systems level things. We profiled:
+- Cilum `ebpf-go`
+  - Autogeneration of go code for BPF data structures (maps, ringbufs, enums,
+    etc, bpf-vm bytecode itself)
+  - Compilation of `.bpf.c` code during go build process
+  - Provides clean, idiomatic API for loading program etc
+  - Tradeoff is **smaller ecosystem**, less powerful than C toolchains e.g.
+    libbpf; design phase doesn't flag the need for any abilities that ebpf-go
+    lacks
+
+### Filtering Program
+
+### Speculating about performance
+
+## Evaluation 2500 words
 
 > **SECTION PURPOSE**: Show how well `addrfilter` achieves its goals; show it's
 > value vs seccomp, and talk about where to use each solution
@@ -291,7 +335,7 @@ detail.
 - The next section places `addrfilter` within this broader context, showing how
   it advances the state of the art in both novelty and utility.
 
-## Related Works
+## Related Works (1500 words)
 
 ### The state of **system call filtering**
 
@@ -325,13 +369,13 @@ detail.
 
   - Idea is that server applications exhibit different set of syscalls on
     startup vs during steady state
-  - Syspart builds on other works [list...]
+  - Syspart builds on other works TODO: list...
 
 - SysXCHG: dynamically swap syscall lists based on `execve`; restrict privileges
   of child processes!
 
 - Optimus (2024): further isolate containers from hosts by introducing a runtime
-  filtering policy
+  filtering policy (use this to reference limitations)
 
 - A lot of work looking at application of principle of least privilege;
   - Work doesn't link itself to **software compartmentalisation**, but
@@ -368,10 +412,20 @@ detail.
   compartmentalisation and system call filtering, providing something new to the
   research community.
 
+#### Addrfilter's limitations
+
+- Optimus argues for the importance of filtering as relating to containers
+  - Specifically poised to look at breakouts
+- Docker: container market share of 87% (https://6sense.com/tech/containerization/docker-market-share)
+  - Containers run by default with a (very permissive) seccomp filter enabled;
+  - Containers are an extremely favourable deployment mechanism for production
+    code; as of time of writing, addrfilter doesn't support filtering from
+    code run in containers
+
 > **SECTION PURPOSE**: Argue that `addrfilter` is **novel**; show where it fits
 > within state of the art.
 
-## Conclusion
+## Conclusion (500 words)
 
 **SECTION PURPOSE**: Talk about what `addrfilter` has achieved and what still
 needs doing.
