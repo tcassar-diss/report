@@ -2,14 +2,23 @@
 
 \usepackage{import}
 \usepackage{amsmath}
-\usepackage[a4paper, total={6in, 9in}]{geometry}
+\usepackage[a4paper, total={5in, 8in}]{geometry}
 \usepackage{graphicx} 
 \usepackage{acro}
 
 \usepackage[hyphens]{url}
 \urlstyle{same}
 
-\usepackage{cite}
+\usepackage[parfill]{parskip}
+\usepackage{caption}
+\usepackage{titling}
+\renewcommand\maketitlehooka{\vspace*{0.15\textheight}} 
+\renewcommand\maketitlehookd{\vfill\null}
+\usepackage{array}
+
+\usepackage{biblatex}
+\addbibresource{main.bib}
+
 \usepackage[hidelinks]{hyperref}
 \usepackage{adjustbox}
 \usepackage[dvipsnames]{xcolor}
@@ -53,6 +62,12 @@
 \addtolength{\topmargin}{-.5in}
 \addtolength{\textheight}{1.0in}
 
+% FIXME: spaces shouldn't be included in commands
+%   also shouldn't need to define a genitive: figure out how to do
+%   properly!
+\newcommand{\af}{\texttt{addrfilter }}
+\newcommand{\afss}{\texttt{addrfilter}}
+\newcommand{\afg}{\texttt{addrfilter}'s{ }}
 
 % Acronyms and abbreviations
 % TODO: Rename section as acronyms and abbreviations
@@ -112,7 +127,36 @@
     long=Filtered Application
 }
 
-\DeclareAcronym{rce} {
-    short={RCE},
-    long=Remote Code Execution
+\DeclareAcronym{aslr} {
+    short = ASLR,
+    long = Address Space Layout Randomisation
 }
+
+\DeclareAcronym{k8s} {
+    short = k8s,
+    long = Kubernetes
+}
+
+
+\DeclareAcronym{ltp} {
+    short = LTP,
+    long = Linux Test Project
+}
+
+\DeclareAcronym{npb} {
+    short = NPB,
+    long = NASA Parallel Benchmark,
+    short-indefinite = an
+}
+
+\DeclareAcronym{ta} {
+    short = TA,
+    long = Threat Actor
+}
+
+\DeclareAcronym{rce} {
+    short = RCE,
+    long = Remote Code Execution,
+    short-indefinite = an
+}
+

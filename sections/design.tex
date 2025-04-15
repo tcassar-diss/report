@@ -5,15 +5,99 @@
 %
 % Idea is to motivate that this is well designed and well thought through.
 % Key design decisions:
-    
+        
 % ------------------------
 % Design introduction: what is the design philosophy? why?
 
+\af is a complex systems level piece of software and therefore required a
+careful design phase. In a systems security project, added code and complexity
+represent more chances for vulnerabilities to appear. Therefore, it was
+important to design \af to be \textbf{as minimal as possible} while fulfilling
+the promise of the proposed fine-grained filtering.
+
+To do this, we defined a \textbf{threat model} (\ref{subsec:threat-model}) and
+let primary requirements (\ref{subsec:requirements}) follow. These primary
+requirements are presented alongside \textit{corollary requirements}
+(\ref{subsubsec:corollary-reqs}) and design assumptions
+(\ref{subsec:assumptions}).
+
+\afg architecture is visualised in Figure \ref{fig:arch-overview}. Each
+section's function is explained in turn and key design decisions are justified.
+The project's nature also requires some auxiliary tooling, which is discussed
+after \afg design is presented.
+
 \subsection{Threat Model}\label{subsec:threat-model}
 
-% Use BPF threat model
+% TODO: be more precise about <exploitation>
+Our threat model lays out situations where \af is effective, and the 
+pre-conditions that ensure applications being protected by \af are secure.
+
+Firstly, we assume that 1) a \ac{ta} has gained \ac{rce} privileges on the host
+machine \footnote{We refer to the machine running \af as the \textit{host
+machine}}. That is, the \ac{ta} can execute any code they wish on the target
+machine. This is one of the most serious breaches that can happen and often
+lead to denial of service, data loss, or data theft.%TODO: cite RCE bad
+
+The attacker aims to use their \ac{rce} to \textbf{escalate privilege}. This
+means we assume that the \ac{ta} 2) doesn't have root privileges on the host,
+but will act to get them.
+
+% TODO: cite swc contains TA to compromised compt.
+\af assumes that 3) some form of \textbf{software compartmentalisation} is in
+place on the host machine. This compartmentalisation confines the \ac{ta} to the
+compromised compartment. Importantly for \afss,~this will prevent the \ac{ta} 
+from branching to an area of the address space that has a different allowed set
+of system calls.
+
+% Use/reference BPF threat model
 % https://www.linuxfoundation.org/hubfs/eBPF/ControlPlane%20%E2%80%94%20eBPF%20Security%20Threat%20Model.pdf#page=11.14
 
 \subsection{Requirements} \label{subsec:requirements}
+
+Defining the high level requirements for \af is now possible, as we can reason
+about exactly \textbf{what \af must protect against}.
+
+\afg key feature is that it should detect where an application makes a 
+\textbf{disallowed syscall} and intervene accordingly. 
+
+This intervention should be \textbf{user configurable}: warning the user, killing the 
+malicious process, be \textbf{user configurable}: warning the user, killing 
+the malicious process, and killing all protected processes should all be
+possible. This gives the user flexibility to choose how to trade-off
+availability and data integrity/confidentiality on a per-application basis.
+
+We should see a \textbf{significant reduction} in the set of syscalls a \ac{ta}
+can access after comprimising an application, and we want to do this
+\textbf{without detrimentally impacting performance}.
+
+Preliminary results are promising on this front: nginx shows a 23.7\% in
+privilege reduction when compared to seccomp, with an average slowdown of $x\%$ - 
+This fulfils the requirement for an increase in security at reasonable runtime cost. 
+A more detailed breakdown of results can be seen in the Evaluation (\ref{sec:evaluation})
+
+To summarise 
+
+\begin{enumerate}
+    \item \af should \textbf{detect} map a syscall whitelist to a contiguous
+        area of the \ac{vma}
+    \item \af should detect \textbf{where} in the \ac{vma} a syscall was made
+        from and \textbf{intervene} if the syscall isn't whitelisted
+    \item \afg intervention policy should be \textbf{user configurable}: issuing
+        a warning, killing the malicious process, and killing all processes
+        being filtered should all be possible
+    \item \af should provide a \texbf{significant level of privilege} reduction
+        when compared to a regular seccomp filter at reasonable s
+\end{enumerate}
+
+\subsection{Corollary Requirements} \label{subsubsec:corollary-reqs}
+
 \subsection{Assumptions}\label{subsec:assumptions}
 \subsection{Architecture} \label{subsec:arch}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8 \linewidth]{./diagrams/TODO.pdf} 
+    \caption{High level overview of \afg architecture}
+    \label{fig:arch-overview}
+\end{figure}
+
