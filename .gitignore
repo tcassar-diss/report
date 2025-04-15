@@ -1,5 +1,6 @@
 *.pdf
 .DS_Store
+*.drawio  # raw drawio files 
 
 # Provided by 
 #    https://github.com/github/gitignore/blob/main/TeX.gitignore
