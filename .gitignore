@@ -1,6 +1,10 @@
 *.pdf
 .DS_Store
+
+# Drawio
 *.drawio  # raw drawio files 
+*.bkp
+*.dtmp
 
 # Provided by 
 #    https://github.com/github/gitignore/blob/main/TeX.gitignore

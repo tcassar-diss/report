@@ -1,8 +1,11 @@
+FLAGS=-shell-escape -pdf
+
+
 report:
-	latexmk -pdf main.tex
+	latexmk $(FLAGS) main.tex
 
 interative:
-	latexmk -pdf -pvc main.tex
+	latexmk $(FLAGS) -pvc main.tex
 
 clean:
 	latexmk -C

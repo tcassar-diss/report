@@ -88,7 +88,7 @@
   understand the need for, design of, and evaluation strategy behind `addrfilter`.
 - Key topics include BPF, seccomp, memory layout, and syscall dispatch.
 
-## Background (1800) words
+## Background (1500) words
 
 > **SECTION PURPOSE**: Introduce the reader to concepts they need to understand
 > to understand `addrfilter`; show that existing solutions are outdated

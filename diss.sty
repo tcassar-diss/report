@@ -22,6 +22,13 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{adjustbox}
 \usepackage[dvipsnames]{xcolor}
+
+\usepackage{caption}
+\usepackage{minted}
+
+% TODO: add figure/table showing that all syscalls are actually made from libc.
+\usepackage{listings}
+\usepackage{todonotes}
 \usepackage{mathptmx}
 \usepackage{marginnote}
 \usepackage{booktabs}
@@ -66,11 +73,39 @@
 %   also shouldn't need to define a genitive: figure out how to do
 %   properly!
 \newcommand{\af}{\texttt{addrfilter }}
+\newcommand{\afgen}{\texttt{addrfilter }}
 \newcommand{\afss}{\texttt{addrfilter}}
 \newcommand{\afg}{\texttt{addrfilter}'s{ }}
+%
+% \usemintedstyle{friendly}       
+% \newminted[pscode]{c}{}
+%   fontsize=\small,
+%   frame=single,
+%   linenos,
+%   keywordstyle=\color{blue},
+%   commentstyle=\color{gray}\itshape,
+%   identifierstyle=\color{black},
+% }
 
 % Acronyms and abbreviations
-% TODO: Rename section as acronyms and abbreviations
+\NewAcroCommand\acg{m}{\acropossessive\UseAcroTemplate{first}{#1}}
+\NewAcroCommand\acsg{m}{\acropossessive\UseAcroTemplate{short}{#1}}
+\NewAcroCommand\aclg{m}{\acropossessive\UseAcroTemplate{long}{#1}}
+
+\NewAcroCommand\acfg{m}{
+    \acrofull
+    \acropossessive
+    \UseAcroTemplate{first}{#1}
+}
+
+\NewAcroCommand\iacsg{m}{
+    \acroindefinite
+    \acropossessive
+    \UseAcroTemplate{short}{#1}
+}
+
+\DeclareAcroEnding{possessive}{'s}{'s}
+
 
 \DeclareAcronym{API}{
     short=API,
@@ -85,6 +120,7 @@
 \DeclareAcronym{bpf}{
     short=eBPF,
     long= The Extended Berkley Packet Filter,
+    short-indefinite = an
 }
 
 \DeclareAcronym{I/O}{
@@ -137,6 +173,11 @@
     long = Kubernetes
 }
 
+\DeclareAcronym{pc}{
+    short = PC,
+    long = Program Counter
+}
+
 
 \DeclareAcronym{ltp} {
     short = LTP,
@@ -160,3 +201,17 @@
     short-indefinite = an
 }
 
+\DeclareAcronym{libc} {
+    short = \texttt{libc},
+    long = The C Standard Library,
+}
+
+\DeclareAcronym{pid} {
+    short = PID,
+    long = Process ID,
+}
+
+\DeclareAcronym{toml} {
+    short = TOML,
+    long = Tom's Ordinary Markup Language
+}
