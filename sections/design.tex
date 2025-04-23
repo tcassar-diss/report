@@ -28,8 +28,6 @@ after \afg design is presented.
 
 \subsection{Threat Model}\label{subsec:threat-model}
 
-% TODO: be more precise about <exploitation>
-
 We started by creating a \textbf{threat model} which lays out the situations and
 pre-conditions where \af is effective at protecting an application.
 
@@ -49,8 +47,11 @@ compromised compartment, preventing the \ac{ta}
 from branching to an area of the address space that has a different allowed set
 of system calls.
 
+\todo{add diagram showing compartment boundaries around a vma}
+
 For completeness, we also explicitly assume that the attacker does not have a
-kernel-level exploit. \todo{explicitly say that this is out of scope}.
+kernel-level exploit. This is out of scope as a kernel level exploit effectively
+gives an attacker root access to the host.
 
 Defining the high level requirements for \af is now possible, as we can reason
 about exactly \textbf{what \af must protect against}.
@@ -69,9 +70,9 @@ possible. This gives the user flexibility to choose how to trade-off
 availability and data integrity/confidentiality on a per-application basis.
 
 We should see a \textbf{significant reduction} in the set of syscalls a \ac{ta}
-can access after comprimising an application, and we want to do this
+can access after compromising an application, and we want to do this
 \textbf{without detrimentally impacting performance}.\todo{see if these
-reqiurements can be made more concrete without giving numbers}
+requirements can be made more concrete without giving numbers}
 
 To summarise 
 
@@ -119,23 +120,40 @@ security risk during the implementation. System calls made in the case where
 %  - (because of generation) => disallowed
 
 We also assume that \ac{libc} is mapped contiguously in memory. Again, this is
-true (almost) without exception and reduces the codebase size and complexity.
+true (almost) without exception and reduces the code base size and complexity.
 It is also important to note that this assumption does not introduce a security
 risk due to the way that syscall site identification is implemented and shown in
 Section \ref{sec:implementation}. \todo{make this forward reference more precise}
 %  TODO: Cite that this is true (I don't know if it's true; and maybe trivially
 %  exploitable
 
+\todo{figure showing contiguous mapping and non-contiguous mapping}
+
+\subsection{Limitations}
+
+The limitations of this design are linked to these assumptions. If \acg{libc}
+address is not contiguous, then \af will not be able to find non-\ac{libc}
+addresses correctly. This will result in syscalls being marked as having 
+\ac{libc} as a callsite, which will result in the syscall filter being
+tripped as discussed in Section \ref{sec:implementation}\todo{reference more
+precisely}. 
+
+The other obvious limitation of this design is that it only makes sense for
+dynamically linked executables. Statically linked executables do not make use of
+shared libraries and therefore making filters for each shared library does not
+make sense.
+
 With the relevant background fully explained and the requirements defined, we
 can move on to presenting the design of \afss.~ 
 
 \subsection{Architecture} \label{subsec:arch}
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=0.8 \linewidth]{./diagrams/TODO.pdf} 
     \caption{High level overview of \afg architecture}
     \label{fig:arch-overview}
+    \todo{block diagram}
 \end{figure}
 
 \af is comprised of a (kernel-space) backend and a userspace frontend.
@@ -149,7 +167,8 @@ maps/ringbuffers to communicate with userspace.
 The program is attached to a \textbf{raw tracepoint}, and runs every time
 a system call is made - even ones not called by by the app being filtered.
 
-\subsubsection{Determining Which Syscalls to Filter}
+\subsubsection{Determining Which Syscalls to
+Filter}\label{subsec:design-fork-following}
 
 This means \af needs a way to identify which system calls were made by the
 protected app. \acp{pid} of filtered processes
@@ -159,10 +178,13 @@ the system call. Otherwise, we continue with the filtering.
 
 % TODO: cite nginx forks to deal with applications
 We also want to apply the filter to any child processes the
-application might create. The reason for this is two-fold: a common workflow for
+application might create - this is called \textbf{fork following}. The reason for this is two-fold: a common workflow for
 web servers (such as nginx) is to fork on receiving a request; the second is
 that if a \ac{ta} could just call fork() to remove the syscall filter, we
 wouldn't have proposed a very secure solution.
+
+\todo{diagram showing protected process in process tree -> child protected with
+fork following}
 
 To do this, we can also check if the parent process's \ac{pid} is in the follow
 map. If it is, we add the calling \ac{pid} to the follow map, and continue with
@@ -237,6 +259,9 @@ In-kernel, the \ac{vma} is implemented as a \texttt{vma\_struct} struct with a
 (indirect) reference to the name of it's backing file. Thus, finding which
 shared library ``owns'' the syscall site is a question of finding the
 corresponding \texttt{vma\_struct} struct and reading the filename.
+
+\todo{Add flow diagram of syscall filtering: filter? -> store new pid -> find
+syscall site -> find shared library filename -> intervene}
 
 \subsubsection{To Kill or not to Kill?}
 
@@ -326,7 +351,7 @@ own standard: a very simple \ac{toml} file. An example is provided in Appendix
 The frontend is also responsible for supporting performance optimisations
 discussed in Section \ref{sec:implementation}. One of these optimisations is
 to keep track of \acp{libc} address space in a map, as we assume \acp{libc} won't
-change. The frontend is reponsible for finding the filtered app's \ac{libc}
+change. The frontend is responsible for finding the filtered app's \ac{libc}
 address range and storing it in a map.
 
 Ensuring that frontend functionality such as parsing whitelists is correct is
@@ -347,7 +372,7 @@ a syscall that is not on the whitelist is made.
 
 To make sure that \af does not interfere with normal syscall functioning, we
 propose to use the \acg{ltp} syscall test suite. We will run the suite on our
-testbench with and without \af enabled and make sure that the results are the
+test bench with and without \af enabled and make sure that the results are the
 same.
 
 Due to the problems with mocking and automating testing (expanded on in Section
@@ -381,7 +406,8 @@ speculate about application characteristics which most impact performance.
 
 To do this evaluation, we need additional tooling. As discussed, we need two
 way to generate per-library syscall whitelists. We also need some way to turn
-these whitelists into a simple seccomp filter. The design of these tools are
+these whitelists into a simple seccomp filter, as well as a tool to compute the
+privilege reduction seen by using \af over seccomp. The design of these tools are
 briefly discussed in Section \ref{subsubsec:additional-tooling}.
 
 \subsection{Additional Tooling}\label{subsubsec:additional-tooling}
@@ -447,11 +473,21 @@ that the generation code makes heavy use of \afg functionality.
   \end{minted}
 \end{listing}
 
-The other tool that we need for the evaluation is one to launch an application
-with a seccomp filter enabled. The tool takes as arguments an \af syscall whitelist
-and a path to an executable. It then parses the whitelist and generates a single
-seccomp filter by taking the union of each shared library's allowed set of
-syscalls present in the \af whitelist.
+We also need a tool that can launch an application with a seccomp filter enabled.
+The tool takes as arguments an \af syscall whitelist
+and a path to an executable, parses the whitelist and generates a single
+seccomp filter. This filter is made by taking the union of each shared 
+library's allowed set of syscalls present in the \af whitelist. The filter can
+then be applied to a benchmark to provide comparison data. This tool will be
+referred to as \texttt{af-seccomp}.
+
+The final additional tool we need is an evaluation tool, \texttt{syso}.
+\texttt{syso} takes in a binary as input and prints a comparison of the 
+binary's privilege levels \todo{forward reference metric} when \af and
+seccomp are applied. It also saves some raw data to disc for further post
+processing: a JSON mapping from syscall numbers to number of times executed,
+broken down by library. An example of this is available in Appendix
+\todo{appendix}
 
 This section looked to motivate the minimalist design philosophy, threat model,
 and requirements for \af. We designed how \af should behave on each system call,
@@ -460,6 +496,6 @@ forward to evaluating our solution and designed required additional tooling.
 
 With these evaluation tools defined, the next step is to turn our design into a
 working solution. In Section \ref{sec:implementation}, we show how the raw 
-tracepoint attachment, BPF map structures, stack‑unwinding logic and userspace 
+tracepoint attachment, BPF map structures, stack-unwinding logic and userspace 
 frontend were implemented to realise the filtering, whitelist generation and 
-seccomp‑wrapper utilities described above.
+seccomp-wrapper utilities described above.

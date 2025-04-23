@@ -36,7 +36,8 @@ this is actually mapped to physical memory.
 
 A process's \ac{vma} is broken down into several conceptual parts: the two
 most relevant to \texttt{addrfilter} are the stack and \textit{file backed
-memory regions}.
+memory regions}. The \ac{vma} can be inspected by looking at the content of the
+\texttt{/proc/PID/maps} pseudofile.
 
 The stack is a data structure used to support the implementation of function
 calls. When a function is called, a \textbf{stack frame} is pushed to the
@@ -75,7 +76,7 @@ is via \textbf{system calls}.
 
 When an application running in userspace wants to access hardware - for example,
 to request a page in memory - it issues a \textbf{system call} (or syscall). System calls
-form an \ac{API} which allows userspace programs to ask the kernel to complete some
+form an \ac{api} which allows userspace programs to ask the kernel to complete some
 task, and return the result back to userspace.
 
 In the case of requesting a memory page, the userspace application will make a
@@ -101,9 +102,6 @@ blacklisted syscalls.
 process's address space into smaller subsections, and assigning a bespoke filter
 to each subsection. This design is a form of \textbf{software
 compartmentalisation}. 
-
-\subsubsection{The \texttt{proc} Filesystem}
-\todo{the procfs}
 
 \subsection{Software Compartmentalisation}
 
@@ -209,9 +207,7 @@ Seccomp also provides functionality which looks like it might be useful for use 
 \end{quote}
 
 However, the instruction pointer alone is insufficient for \texttt{addrfilter}'s
-requirements. 
-% TODO: Cite initial eval run results? Include plot here?
-Syscalls are almost always made from \texttt{libc}, which means the instruction
+requirements. Syscalls are almost always made from \texttt{libc}, which means the instruction
 pointer on syscall entry almost always originates in \texttt{libc}. This doesn't
 provide any useful information on where the system call was made. 
 
@@ -225,7 +221,7 @@ Since seccompBPF doesn't provide all the functionality needed for
 call filtering proposed.
 
 To do this, a novel approach is needed. Kernel code will require access to the full
-\ac{bpf} featureset involving interaction with various process-specific data
+\ac{bpf} feature set involving interaction with various process-specific data
 structures (e.g. the process's stack, virtual address space, and filesystem).
 
 \subsection{Conclusion}
