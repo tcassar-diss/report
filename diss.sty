@@ -44,6 +44,9 @@
 \usepackage{etoolbox}
 \AtBeginEnvironment{quote}{\par\singlespacing\small}
 
+% make text machine searchable
+\pdfgentounicode=1
+
 \let\oldphi\phi
 \renewcommand{\phi}{\varphi}
 
@@ -61,6 +64,31 @@
     urlcolor=warmterracotta,
 }
 
+\usepackage{tikz}
+\tikzset{
+  tech/.style={
+    draw,
+    rectangle,
+    rounded corners,
+    minimum width=3cm,
+    minimum height=1cm,
+    align=center,
+    font=\sffamily
+  },
+  box/.style={
+    draw,
+    rounded corners,
+    align=center,
+    minimum width=3.5cm,
+    minimum height=1cm,
+    font=\small
+  },
+  arr/.style={
+    -{Latex[length=3mm]},
+    semithick
+  }
+}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc}
 \hypersetup{breaklinks=true}
 
 \addtolength{\oddsidemargin}{-0.4in}
@@ -214,4 +242,29 @@
 \DeclareAcronym{toml} {
     short = TOML,
     long = Tom's Ordinary Markup Language
+}
+
+\DeclareAcronym{core}{
+    short = {CO-RE},
+    long = {Compile Once, Run Anywhere}
+}
+
+\DeclareAcronym{btf} {
+    short = BTF,
+    long = BPF Type Format
+}
+
+\DeclareAcronym{stdout} {
+    short = \texttt{stdout},
+    long = Standard Output
+}
+
+\DeclareAcronym{loc} {
+    short = LoC,
+    long = Lines of Code
+}
+
+\DeclareAcronym{cli} {
+    short = CLI,
+    long = Command Line Interface
 }
