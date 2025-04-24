@@ -1,61 +1,71 @@
 \section{Background} \label{sec:background}
 
-%%% WHAT DOES THE BACKGROUND SECTION ACCOMPLISH?
-% - Here is what you need to know
-% - This is why it's relevant
+\af is a project built on a complex stack of systems technologies such as Linux
+processes, system calls, instrumentation points, \ac{bpf}, software
+compartmentalisation, and existing Linux security features such as \ac{aslr}.
 
-% Aim for 2,000 words
+Pre-requisite knowledge needed to understand \afg motivation, design, and
+implementation, is provided in this chapter. \todo{Read ``The Linux Programming
+Interface''}
 
-\texttt{addrfilter} is built on a complex stack of systems technologies,
-including Linux syscall mechanisms, compartmentalisation, and \ac{bpf}. This
-chapter covers the necessary background.
+\subsection{Processes and Virtual Memory}
 
-\subsection{Linux Primitives}
+\subsubsection{The Virtual Memory Area}
 
-There are two core ideas in Linux which underpin not only the design of
-\texttt{addrfilter}, but also the ideas presented in this chapter. A refresher
-of the \textbf{process} and \textbf{kernel} is provided here.
+% what is process virtual memory
+% what does it look like in kernel?
+% - vma_struct
+% - mention vma red-black tree
+% file-backed regions: for when a file such as a shared library file (aka shared
+% object file) is loaded into a process's address space. This makes the contents
+% of the file accessible between some set addresses.
 
-\subsubsection{Processes}
+Every process on a Linux machine interacts with memory through the abstraction
+that is virtual memory. Instead of interacting with physical memory addresses,
+every process's \ac{vma} is numbered from 0 to 256TB\todo{replace this with a
+number}. The kernel ensures that processes don't overlap on physical memory and
+enforces the permissions associated with each area of the \ac{vma}.
 
-At the core of system call filtering is the concept of a \textbf{process}. A
-process can be loosely thought of as an application - more concretely, it is an
-\textit{instance of an executing program} \cite{LINUX_PROGRAMMING_INTERFACE}. A
-system call filter is applied to a process and requires some of the process's
-key constructs to work. These constructs are discussed here: the \textit{virtual
-memory area}, and \textit{the process stack}.
+In Linux, each process's \ac{vma} is managed using a
+red-black tree where each node contains a reference to a
+\texttt{vm\_area\_struct} \todo{inline/appendix listing of vma\_struct
+definition}. Every \texttt{vm\_area\_struct} details a specific, contiguous
+range within the process's virtual address space. The information stored
+includes the start and end addresses of the range, the backing file (if any)
+from which the range was populated, and the offset within that file. This file
+offset is needed for supporting \acp{pie}, allowing code and data segments to be correctly located even if loaded at different base addresses.
 
-Each process needs to access memory in a way that is isolated from every other
-process running on the host machine. This isolation is achieved through the
-concept of \textbf{virtual memory}.
+When data is loaded from a file into a process's \ac{vma} it is called a
+\textit{file-backed memory region}, visualised in Figure
+\ref{fig:file-backed-vma}. This typically spans multiple
+\texttt{vm\_area} structs and is almost always contiguous. This is common in dynamically
+linked executables, where the object code from a shared library file is made
+accessible to the main binary by loading it into the main binary's \ac{vma}. 
 
-Each process has access to its own isolated section of memory, which appears
-contiguous to the process. The process's \ac{vma} starts from address 0 and
-contains 256TB worth of memory addresses. In reality, only a small fraction of
-this is actually mapped to physical memory. 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8 \linewidth]{./diagrams/file-backed-vma.drawio.pdf} 
+    \caption{A figure showing a file being loaded into a process's \ac{vma} to
+    create a \textit{file backed memory region}. One vertical chunk represents
+one address range represented by a \texttt{vm\_area} struct.}
+    \label{fig:file-backed-vma}
+\end{figure}
 
-A process's \ac{vma} is broken down into several conceptual parts: the two
-most relevant to \texttt{addrfilter} are the stack and \textit{file backed
-memory regions}. The \ac{vma} can be inspected by looking at the content of the
-\texttt{/proc/PID/maps} pseudofile.
+As well as containing information about where the data was loaded from, the
+\texttt{vm\_area} struct also contains details about page permissions \todo{is it
+page permissions?}. This is a Linux security feature which is enforced by the
+kernel which lets pages in the \texttt{vm\_area} struct be marked as having read,
+write or execute permissions.
+\todo{research this properly}
 
-The stack is a data structure used to support the implementation of function
-calls. When a function is called, a \textbf{stack frame} is pushed to the
-stack. This contains things like local variables, return variables, and
-return pointers. Return pointers are used by \texttt{addrfilter} to help
-determine which shared library file made a system call.
+\subsubsection{Existing Security Mechanisms}
+% Page permissions (link from vma)
+% ASLR: relevant for filtering as we need to track addresses
+\todo{diagram showing vma of child after execve with/without aslr}
+% Users, user groups and permissions
+% Kernel/user seperation for privileged actions
 
-\texttt{addrfilter} also relies on the concept of file-backed memory regions 
-to do this. File backed memory regions appear when a file was used to populate
-part of a process's \ac{vma}. This is commonly seen with dynamically linked
-executables: a \texttt{.so} file will be used to populate part of the
-process's \ac{vma}. The original filepath is maintained in kernel metadata and
-can be accessed by inspecting the \texttt{vma\_struct} data structure.
-
-The metadata about files is stored in the kernel: a key concept in Linux-based
-operating systems. The next section discusses the kernel in more detail.
-
-\subsubsection{The Linux Kernel}
+\subsubsection{Kernelspace vs Userspace}
 Operating systems have two modes, or \textit{worlds}, associated with them: user
 mode and kernel mode. User mode, or userspace, is designed to run untrusted 
 applications. There is no direct access to hardware, I/O devices, or the 
@@ -72,7 +82,9 @@ applications aren't allowed direct access to the hardware, then how do user
 applications, such as web browsers, interact with hardware resources? The answer
 is via \textbf{system calls}.
 
-\subsection{System Calls}
+% Data transfer between kernelspace and userspace done via syscalls
+
+\subsection{Syscalls}
 
 When an application running in userspace wants to access hardware - for example,
 to request a page in memory - it issues a \textbf{system call} (or syscall). System calls
@@ -80,12 +92,12 @@ form an \ac{api} which allows userspace programs to ask the kernel to complete s
 task, and return the result back to userspace.
 
 In the case of requesting a memory page, the userspace application will make a
-call to \texttt{mmap()} from the \ac{OS}'s C standard library (e.g. \texttt{libc}).
+call to \texttt{mmap()} from the \acp{os} C standard library (e.g. \texttt{libc}).
 This triggers a \textit{world switch}: the process of changing the hardware
 to/from kernel mode.
 
 A world switch is a costly operation, involving flushing any virtually mapped
-caches and copying all the contents of all \ac{CPU} registers to the user stack. This
+caches and copying all the contents of all \ac{cpu} registers to the user stack. This
 is done to ensure a strict separation between kernelspace and userspace, and to
 make sure that the userspace process can continue running as usual after the
 syscall.
@@ -104,7 +116,6 @@ to each subsection. This design is a form of \textbf{software
 compartmentalisation}. 
 
 \subsection{Software Compartmentalisation}
-
 Software compartmentalisation is a form of defensive programming where an
 application is broken down into multiple isolated compartments \cite{SOK}. Compartments
 communicate only over secure interfaces and do not trust each other. An attacker
@@ -147,92 +158,29 @@ without changing any configuration files or using sidecar containers \cite{SIDEC
 be loaded onto the \ac{xdp} to inspect packets at the ``\textit{earliest possible
 point in the network driver}'' \cite{CILIUM_BPF_XDP_INTRO}. 
 
-The trade-off here is that \ac{bpf} is extremely limited in expressivity:
-something as mundane as reading every element of an array can be impossible due
-to the verifier needing to ensure that every memory access will not result in 
-a null dereference (even though a loop helper now exists \cite{BPF_LOOP_COMMIT}). Lots of accesses to structs must be done through
-\textbf{helper functions} - convenient when they exist, but sometimes mean a
-trivial task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}.
+\subsubsection{The Verifier}
 
-Despite being designed as observability tooling, \ac{bpf} is increasingly being
-used for security applications such as mitigating SPECTRE
-\cite{SPECTRE_BPF_MITIGATION} or dropping carefully-crafted packets that can
-lead to an exploit in kernel \cite{BPF_PACKET_MITIGATION}. Integration with
-\ac{lsm} has been added as part of a suite of security tools for \ac{bpf}
-\cite{StarovoitovBPFSecurity}, which
-shows there is precedent for using \ac{bpf} as security tooling. Furthermore,
-seccompBPF is an extension of the existing seccomp which can define a custom
-syscall filter in terms of a \ac{bpf} program \cite{seccompBPF}. Knowing this information
-justifies why developing \texttt{addrfilter} in \ac{bpf} was a sensible idea.
+\subsubsection{Communicating with Userspace}
+% Maps (not threadsafe)
+% Ringbuffers (coords by default)
 
-The next section explores more about seccomp and traditional syscall
-filtering mechanisms, and discusses the gaps in the security guarantees they
-provide.
+\subsection{Traditional Syscall Filtering Mechanisms}
 
-\subsection{Traditional Filtering Mechanisms}
+\subsubsection{Introducing seccomp}
 
-Syscall filtering was added to the Linux Kernel in 2005 for use in grid
-computing - a paradigm involving running untrusted, compute bound programs on a
-personal computer \cite{GRID_COMPUTING_INTRO}. The
-filtering mechanism was called \texttt{seccomp}, and its purpose was to
-restrict the set of syscalls that a process could make \cite{arcangeli_seccomp_2005}.
+\subsubsection{Address space limitations}
 
-Despite slow initial adoption, with Linus Torvalds famously questioning whether
-anyone actually uses seccomp in 2009 \cite{TORVALDS_ANYONE_USES_SECCOMP}, it is
-widespread today. Android has used it since 8.0 Oreo, Docker containers are
-created with a seccomp filter by default, and FireFox uses it as a means of
-sandboxing content processes \cite{android_seccomp_oreo, docker_seccomp,
-firefox_seccomp}.
+% discuss => problem; we can apply the principle of least privilege further. 
+% Applications getting bigger => one filter becomes too permissive.
 
-Seccomp is invoked with the \texttt{prctl} syscall in one of two modes: strict
-or filter. In strict mode, only three system calls are allowed: \texttt{read},
-\texttt{write}, and \texttt{exit} \cite{MAN_PAGES_SECCOMP}. This is typically
-too strict to be helpful and so the filter mode also exists.
-
-In filter mode, a \ac{bpf} program (plus some metadata) is supplied in the arguments to
-\texttt{prctl}. When a system call occurs, this program is run and its logic
-determines how to handle the system call. 
-
-Seccomp also provides functionality which looks like it might be useful for use in
-\texttt{addrfilter}. From the man pages:
-
-\begin{quote}
-    The instruction\_pointer field provides the address of the machine-
-    language instruction that performed the system call.  This might
-    be useful in conjunction with the use of /proc/pid/maps to perform
-    checks based on which region (mapping) of the program made the
-    system call.  (Probably, it is wise to lock down the mmap(2) and
-    mprotect(2) system calls to prevent the program from subverting
-    such checks.)
-\end{quote}
-
-However, the instruction pointer alone is insufficient for \texttt{addrfilter}'s
-requirements. Syscalls are almost always made from \texttt{libc}, which means the instruction
-pointer on syscall entry almost always originates in \texttt{libc}. This doesn't
-provide any useful information on where the system call was made. 
-
-Furthermore, relying on \texttt{/proc/pid/maps} requires added engineering
-effort to avoid \ac{toctou} complications -- clearly, a new solution is needed
-to be able to filter system calls by address space. 
-
-Since seccompBPF doesn't provide all the functionality needed for 
-\texttt{addrfilter}, and is more restrictive than (the already restrictive) 
-\ac{bpf}, it isn't the right tool for implementing the fine-grained system
-call filtering proposed.
-
-To do this, a novel approach is needed. Kernel code will require access to the full
-\ac{bpf} feature set involving interaction with various process-specific data
-structures (e.g. the process's stack, virtual address space, and filesystem).
-
-\subsection{Conclusion}
 
 This chapter has covered background essential to understanding the need for, and
-the design choices behind, \texttt{addrfilter}. Additional information on the
+the design choices behind, \afss. Additional information on the
 virtual address space, stack, and filesystem of a process was given. System
 calls were introduced as a means of communication between kernel- and userspace.
-Software compartmentalisation and its relevance to \texttt{addrfilter} was
+Software compartmentalisation and its relevance to \af was
 discussed, and \ac{bpf} was motivated as the method of choice for writing kernel
 code. 
 
 The next section will combine all of this relevant prerequisite knowledge into a
-high level design for \texttt{addrfilter}.
+high level design for \afss. 

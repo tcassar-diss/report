@@ -34,20 +34,28 @@ pre-conditions where \af is effective at protecting an application.
 Firstly, we assume that 1) a \ac{ta} has gained \ac{rce} privileges on the host
 machine \footnote{We refer to the machine running \af as the \textit{host
 }}. That is, the \ac{ta} can execute any code they wish on the host. This is one of the most serious breaches that can happen and often
-lead to denial of service, data loss, or data theft.%TODO: cite RCE bad
+lead to denial of service, data loss, or data theft \cite{RCE_BAD}.
 
 The attacker aims to use their \ac{rce} exploit to \textbf{escalate privilege}. This
 means we assume that 2) the \ac{ta} doesn't have root privileges on the host,
 but will act to get them.
 
-% TODO: cite swc contains TA to compromised compt.
 \af assumes that 3) some form of \textbf{software compartmentalisation} is in
 place on the host machine. This compartmentalisation confines the \ac{ta} to the
-compromised compartment, preventing the \ac{ta} 
+compromised compartment \cite{SOK}, preventing the \ac{ta} 
 from branching to an area of the address space that has a different allowed set
-of system calls.
+of system calls. We assume that the compartmentalisation in place is at least as
+broad as that shown in Figure~\ref{fig:compartments-around-vma}. That is, if an
+attacker gains access to a file backed region of the address space, they will be
+contained there.
 
-\todo{add diagram showing compartment boundaries around a vma}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.96 \linewidth]{./diagrams/compartments-around-so.drawio.pdf} 
+    \caption{A diagram showing how compartment boundaries are drawn to align
+    with file-backed regions of the process's \ac{vma}.}
+    \label{fig:compartments-around-vma}
+\end{figure}
 
 For completeness, we also explicitly assume that the attacker does not have a
 kernel-level exploit. This is out of scope as a kernel level exploit effectively
@@ -76,24 +84,18 @@ requirements can be made more concrete without giving numbers}
 
 To summarise 
 
-% TODO: chatgpt these for clarity
 \begin{enumerate}
-    \item \af should map a syscall whitelist to each file-backed region of a
-        process's \ac{vma}
-    \item \af should detect \textbf{where} in the \ac{vma} a syscall was made
-        from and \textbf{intervene} if the syscall isn't whitelisted
-    \item \afg intervention policy should be \textbf{user configurable}: issuing
-        a warning, killing the malicious process, and killing all processes
-        being filtered should all be possible
-    \item \af should provide a \textbf{significant level of privilege} reduction
-        when compared to a regular seccomp filter at reasonable runtime slowdown
+    \item \af \textit{shall} associate a distinct system call whitelist with each unique file-backed region within a process's \ac{vma}.
+    \item \af \textit{shall} \textbf{identify the specific memory region} within the \ac{vma} from which a system call originates. If the invoked system call is not included in the whitelist associated with that originating region, \af \textit{shall} \textbf{trigger an intervention}.
+    \item The intervention action taken by \af upon detecting a non-whitelisted system call \textit{shall} be \textbf{configurable by the user}. The available configuration options \textit{shall} include, at minimum: (a) logging a warning, (b) terminating the process that issued the disallowed syscall, and (c) terminating all processes currently being monitored by \af.
+    \item \af \textit{shall} demonstrably achieve a \textbf{greater reduction in process privileges} compared to a standard Linux seccomp filter configuration. This security enhancement \textit{shall} be achieved while incurring a runtime performance overhead deemed acceptable within pre-defined limits.
 \end{enumerate}
 
 \subsection{Corollary Requirements} \label{subsubsec:corollary-reqs}
 
 The primary requirements listed above leave some questions unanswered.
-% TODO: cite devs don't know app syscalls
-Developers don't know which system calls their application makes - let alone
+Developers don't know which system calls their application makes\todo{does this
+need a citation?} - let alone
 which shared libraries are responsible for each syscall. Therefore, we also
 provide \textbf{automated whitelist generation tooling} with \af. 
 
@@ -119,15 +121,21 @@ security risk during the implementation. System calls made in the case where
 %  - => check to see if in libc whitelist; no libc whitelist guaranteed
 %  - (because of generation) => disallowed
 
-We also assume that \ac{libc} is mapped contiguously in memory. Again, this is
-true (almost) without exception and reduces the code base size and complexity.
+We also assume that \ac{libc} is mapped contiguously in memory, shown in
+Figure~\ref{fig:libc-contiguous}. Again, this is
+true (almost) without exception\footnote{Custom patches to the kernel could
+violate this invariant} and reduces the code base size and complexity.
 It is also important to note that this assumption does not introduce a security
 risk due to the way that syscall site identification is implemented and shown in
-Section \ref{sec:implementation}. \todo{make this forward reference more precise}
-%  TODO: Cite that this is true (I don't know if it's true; and maybe trivially
-%  exploitable
+Section \ref{subsubsec:impl-find-site-opt} \cite{glibc-dl-map-segments-h}.
 
-\todo{figure showing contiguous mapping and non-contiguous mapping}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.6 \linewidth]{./diagrams/libc-contig-vs-noncontig.drawio.pdf} 
+    \caption{A figure showing what a contiguous mapping of \ac{libc} in a
+    process's address space vs a non-contiguously mapped \ac{libc}.}
+    \label{fig:libc-contiguous}
+\end{figure}
 
 \subsection{Limitations}
 
@@ -135,8 +143,7 @@ The limitations of this design are linked to these assumptions. If \acg{libc}
 address is not contiguous, then \af will not be able to find non-\ac{libc}
 addresses correctly. This will result in syscalls being marked as having 
 \ac{libc} as a callsite, which will result in the syscall filter being
-tripped as discussed in Section \ref{sec:implementation}\todo{reference more
-precisely}. 
+tripped as discussed in Section \ref{subsubsec:err-handling}. 
 
 The other obvious limitation of this design is that it only makes sense for
 dynamically linked executables. Statically linked executables do not make use of
@@ -150,10 +157,9 @@ can move on to presenting the design of \afss.~
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.8 \linewidth]{./diagrams/TODO.pdf} 
+    \includegraphics[width=0.8 \linewidth]{./diagrams/high-level-overview.drawio.pdf} 
     \caption{High level overview of \afg architecture}
     \label{fig:arch-overview}
-    \todo{block diagram}
 \end{figure}
 
 \af is comprised of a (kernel-space) backend and a userspace frontend.
@@ -176,15 +182,23 @@ need to be stored in \iac{bpf} map. Then, on every system call, we check if the
 called process's \ac{pid} is in the map of filtered processes. If not, ignore
 the system call. Otherwise, we continue with the filtering.
 
-% TODO: cite nginx forks to deal with applications
 We also want to apply the filter to any child processes the
 application might create - this is called \textbf{fork following}. The reason for this is two-fold: a common workflow for
-web servers (such as nginx) is to fork on receiving a request; the second is
-that if a \ac{ta} could just call fork() to remove the syscall filter, we
-wouldn't have proposed a very secure solution.
+web servers (such as nginx) \cite{apache-prefork-2.4, nginx-inside-performance-scale-2015} is to fork on receiving a request; the second is
+that if a \ac{ta} could just call fork() to remove the syscall filter, our
+solution would not be secure. Fork following is visualised in
+Figure~\ref{fig:fork-follow-process-tree} with two process trees. With fork
+following, each child process is protected by addrfilter. Without it, children
+are left unprotected.
 
-\todo{diagram showing protected process in process tree -> child protected with
-fork following}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8 \linewidth]{./diagrams/fork-following.drawio.pdf} 
+    \caption{A diagram showing two different process trees: one with fork
+    following (left) and one without fork following (right).}
+    \label{fig:fork-follow-process-tree}
+\end{figure}
+
 
 To do this, we can also check if the parent process's \ac{pid} is in the follow
 map. If it is, we add the calling \ac{pid} to the follow map, and continue with
@@ -192,8 +206,8 @@ the filtering. So, we only ignore syscall if \textbf{neither the current nor
 parent \ac{pid} exists in the follow map}.
 
 Having decided to filter a syscall, we need to identify where in the process's
-address space the syscall was made. The value of the \ac{pc} seems like a good
-place to start, but doesn't help here.
+address space the syscall was made. We might use the value of the \ac{pc} when
+the syscall was made, but this turns out to be unhelpful.
 Almost all system calls are made via \ac{libc} in a dynamically linked 
 application, and so the \ac{pc} almost always points to \ac{libc} instead of the
 library that actually made the syscall.
@@ -205,46 +219,42 @@ userspace stack}, and treat this address as the true syscall site. In other
 words, we trace through the sequence of function calls that led to the system
 calls and find the first call that wasn't made by libc.
 
-For example consider a ``hello, world'' program in C. \texttt{printf()} is a 
+For example consider a ``hello, world'' program in C (see Listing~\ref{lst:hello-world}). \texttt{printf()} is a 
 function implemented in \ac{libc} which invokes the \texttt{write()} syscall
-behind the scenes. This means the userspace stack will look something like:
+behind the scenes, which in turn will call the \texttt{syscall} x86
+instruction\footnote{This is a simplified stack trace: in \texttt{musl},
+\texttt{write()} calls a wrapper function \texttt{syscall\_cp\_c()}. However,
+the idea still holds.}. This means the userspace stack may look something the stack
+presented in Figure~\ref{fig:hello-world-stack}
 
-% TODO: turn this into a diagram
 
-%                             [STACK GROWS =>] 
-% ------------------------------------------------------------------
-% main (0x$a) => printf (0x$b) => ... => write() (0x$pc)
-% ^^^^^^^^^^^^^| LIBC     | ------------ XXXXXXXXXXXXXXX
-%              | BOUNDARY |              PC value (incorrect site)
-% true syscall site
-
-\todo{Add stack diagram for hello world}
-
-% TODO: move hello world to appendix
-%
-% \begin{lstlisting}
-%     # include <stdio.h>
-%
-%     int main() {
-%         printf("hello, world");
-%
-%         return 0;
-%     } 
-% \end{lstlisting}
-%
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.4 \linewidth]{./diagrams/hello-world-stack.drawio.pdf} 
+    \caption{An example representation of what a \textit{hello, world}
+    application's user stack may look like.}
+    \label{fig:hello-world-stack}
+\end{figure}
 
 The addresses shown in the diagram are \textbf{return pointers}: these are the
 memory address of the instructions which added a new frame to the stack. In this
-context, it's helpful to think of return pointers as the \textbf{address of a function}.
+context, it's helpful to think of return pointers as the \textbf{address of a
+function}. Note also that the top few stack frames all belong to \ac{libc}, with
+the main binary a few frames deeper.
 
 The idea is that here we want to classify this syscall as having been made from
 the \texttt{main} binary, not from \ac{libc}. We can do this by
 \textit{unwinding the stack} until we find a return pointer which isn't within
 \acg{libc} address space. This return pointer is then used as the syscall
-invocation site.
+invocation site, as shown in Figure~\ref{fig:stack-unwinding}.
 
-\todo{Add diagram showing correct address with stack unwinding, incorrect
-without}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8 \linewidth]{./diagrams/stack-unwinding.drawio.pdf} 
+    \caption{A figure showing \textit{why} stack unwinding is needed to find the
+    correct syscall invocation site.}
+    \label{fig:stack-unwinding}
+\end{figure}
 
 \subsubsection{Finding the Calling Shared Object File}\label{subsubsec:find_so}
 
@@ -253,15 +263,20 @@ can now figure out which shared library made the system call. Doing this is a
 question of checking the process's \ac{vma} to find which memory region the
 function belongs to. 
 
-% TODO: remove reference to vma_struct; could access via /proc/pid/maps
 Each shared library exists in the \ac{vma} as a \texttt{file backed memory region}.
 In-kernel, the \ac{vma} is implemented as a \texttt{vma\_struct} struct with a
 (indirect) reference to the name of it's backing file. Thus, finding which
 shared library ``owns'' the syscall site is a question of finding the
 corresponding \texttt{vma\_struct} struct and reading the filename.
+Alternatively, this information can be read from userspace via the
+\texttt{/proc/PID/maps} pseudofile.
 
-\todo{Add flow diagram of syscall filtering: filter? -> store new pid -> find
-syscall site -> find shared library filename -> intervene}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8 \linewidth]{./diagrams/core-filter-flowchart.drawio.pdf}
+    \caption{A figure showing \afg core filtering logic at a high level.}
+    \label{fig:core-filter-flowchart}
+\end{figure}
 
 \subsubsection{To Kill or not to Kill?}
 
@@ -284,49 +299,9 @@ When userspace reads \iac{pid} from the ringbuffer, it acts according to how it 
 configured. A warning will be logged in warn mode, but in ``kill all'' mode, a
 kill signal will be sent to each \ac{pid} in the filtering map. This has to be
 done asynchronously (by userspace) as \ac{bpf} only allows you to send signals
-to the calling process.
-
-The whole process is summarised in pseudocode in
-Listing~\ref{lst:syscall-filter}.
-
-% TODO: format nicely; make sure figure doesn't interrupt listing; declare as
-% figure/table/something with caption; add to List of ...
-
-\begin{listing}[ht]
-  \caption{Pseudocode showing what happens when a syscall is made}\label{lst:syscall-filter}
-  \begin{minted}[fontsize=\small, frame=single, linenos]{c}
-  on every syscall {
-      // only filter syscalls made from filter app or its children
-      pid, ppid = get_pid(), get_ppid()
-
-      if (pid not in filter_map and ppid not in filter_map) {
-          return 0;
-      }
-
-      // protect forks of protected processes
-      if (pid not in filter_map) {
-          insert(filter_map, pid)
-      }
-
-      syscall_nr = get_syscall_num()
-
-      // unwind the stack to find the first non-libc return pointer
-      rp = find_syscall_site()
-
-      // find which shared library the rp points to
-      calling_so = lookup_vma_file(rp)
-      whitelist = get_whitelist(calling_so)
-
-      if syscall_nr not in whitelist {
-          // intervene based on user configuration
-          intervene()
-      }
-
-      // otherwise, success!
-      return 0;
-  }
-  \end{minted}
-\end{listing}
+to the calling process. The filtering process is summarised in pseudocode in
+Listing~\ref{lst:syscall-filter} and visualised in 
+Figure~\ref{fig:core-filter-flowchart}.
 
 This design is minimal, modular, and easy to reason about. It can be achieved
 with a single \ac{bpf} program running on the \texttt{raw\_tp/sys\_enter}
@@ -345,8 +320,8 @@ the whitelist map. We looked to build on existing standards for defining
 syscall whitelists but found none suitable for our use case. Seccomp filters,
 for example, are defined as a \iac{bpf} program - this isn't user friendly and
 doesn't allow for mapping shared libraries to syscall filters. Therefore, we defined our
-own standard: a very simple \ac{toml} file. An example is provided in Appendix
-\todo{appendix example of TOML whitelist}.
+own standard: a very simple TOML file. An example is provided in
+Listing~\ref{lst:toml-whitelist}.
 
 The frontend is also responsible for supporting performance optimisations
 discussed in Section \ref{sec:implementation}. One of these optimisations is
@@ -380,7 +355,7 @@ Due to the problems with mocking and automating testing (expanded on in Section
 syscall filtering works as expected. Writing a comprehensive test harness in requires 
 significant engineering effort: likely more than developing the solution. 
 
-Therefore, we opted for validation via manual
+Therefore, we will opt for validation via manual
 verification. During development, we will write a set of programs with a stack 
 that is easy to inspect with tools like \texttt{gdb}. We will use a small set of
 syscalls and dynamically generate whitelists (as discussed in
@@ -392,7 +367,7 @@ Evaluation will also involve two phases. First, we will investigate the degree
 of privilege reduction that a developer can expect from using \af on an
 application. To do this, we define a \textit{privilege metric} and compare how
 privileged seccomp-filtered applications are vs \afss-filtered applications.
-\todo{forward-ref privilege metric}.
+\todo{forward-ref privilege metric}
 
 We then look to evaluate how costly \af is at runtime. To do this, we will take
 a broad array of benchmarks informed by modern syscall filtering literature and
@@ -425,53 +400,9 @@ We implement the whitelist generator using a lot of the same functionalities of
 syscall number to the syscall site's map (recall that at this stage \af would
 check to see if the syscall number was in the site's map and intervene if need
 be). When the program finishes executing (or on Ctrl-C), the frontend reads the
-contents of the bpf whitelist map and marshals the results to a \ac{toml} file.
-The pseudocode is provided in Listing \ref{lst:generator-pseudocode} and shows
+contents of the bpf whitelist map and marshals the results to a TOML file.
+The pseudocode is provided in Listing~\ref{lst:generator-pseudocode} and shows
 that the generation code makes heavy use of \afg functionality.
-
-\begin{listing}[ht]
-  \caption{Pseudocode showing how dynamic analysis based whitelist generation is
-  implemented}\label{lst:generator-pseudocode}
-  \begin{minted}[fontsize=\small, frame=single, linenos]{c}
-  on every syscall {
-      // only filter syscalls made from filter app or its children
-      pid, ppid = get_pid(), get_ppid()
-
-      if (pid not in filter_map and ppid not in filter_map) {
-          return 0;
-      }
-
-      // protect forks of protected processes
-      if (pid not in filter_map) {
-          insert(filter_map, pid)
-      }
-
-      syscall_nr = get_syscall_num()
-
-      // unwind the stack to find the first non-libc return pointer
-      rp = find_syscall_site()
-
-      // find which shared library the rp points to
-      calling_so = lookup_vma_file(rp)
-
-      // at this point, the generation code becomes different to addrfilter
-
-      // create a new whitelist for the calling_so if it doesn't already exist
-      if calling_so not in whitelist_map {
-        insert_to_map(whitelist_map, calling_so, new(whitelist))
-      }
-
-      // write the syscall number into the calling_so's whitelist, and update
-      // the map
-      whitelist = get_whitelist(calling_so)
-      write_to_whitelist(whitelist, syscall_nr)
-      insert_to_map(whitelist_map, calling_so, whitelist)
-        
-      // success!
-      return 0;
-  }
-  \end{minted}
-\end{listing}
 
 We also need a tool that can launch an application with a seccomp filter enabled.
 The tool takes as arguments an \af syscall whitelist
@@ -486,8 +417,8 @@ The final additional tool we need is an evaluation tool, \texttt{syso}.
 binary's privilege levels \todo{forward reference metric} when \af and
 seccomp are applied. It also saves some raw data to disc for further post
 processing: a JSON mapping from syscall numbers to number of times executed,
-broken down by library. An example of this is available in Appendix
-\todo{appendix}
+broken down by library. An example of this is available in
+Listing~\ref{lst:syso-data-dump}.
 
 This section looked to motivate the minimalist design philosophy, threat model,
 and requirements for \af. We designed how \af should behave on each system call,

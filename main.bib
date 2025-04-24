@@ -330,3 +330,168 @@
     location = {San Francisco},
     isbn = {9781593272203},
 }
+
+@article{RCE_BAD,
+    author = {Sayar, Imen and Bartel, Alexandre and Bodden, Eric and Le Traon,
+              Yves},
+    title = {An In-depth Study of Java Deserialization Remote-Code Execution
+             Exploits and Vulnerabilities},
+    year = {2023},
+    issue_date = {January 2023},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {32},
+    number = {1},
+    issn = {1049-331X},
+    url = {https://doi.org/10.1145/3554732},
+    doi = {10.1145/3554732},
+    abstract = {Nowadays, an increasing number of applications use
+                deserialization. This technique, based on rebuilding the instance
+                of objects from serialized byte streams, can be dangerous since
+                it can open the application to attacks such as remote code
+                execution (RCE) if the data to deserialize is originating from an
+                untrusted source. Deserialization vulnerabilities are so critical
+                that they are in OWASPÕs list of top 10 security risks for web
+                applications. This is mainly caused by faults in the development
+                process of applications and by flaws in their dependencies, i.e.,
+                flaws in the libraries used by these applications. No previous
+                work has studied deserialization attacks in-depth: How are they
+                performed? How are weaknesses introduced and patched? And for how
+                long are vulnerabilities present in the codebase? To yield a
+                deeper understanding of this important kind of vulnerability, we
+                perform two main analyses: one on attack gadgets, i.e.,
+                exploitable pieces of code, present in Java libraries, and one on
+                vulnerabilities present in Java applications. For the first
+                analysis, we conduct an exploratory large-scale study by running
+                256515 &nbsp;experiments in which we vary the versions of
+                libraries for each of the 19 publicly available exploits. Such
+                attacks rely on a combination of gadgets present in one or
+                multiple Java libraries. A gadget is a method which is using
+                objects or fields that can be attacker-controlled. Our goal is to
+                precisely identify library versions containing gadgets and to
+                understand how gadgets have been introduced and how they have
+                been patched. We observe that the modification of one
+                innocent-looking detail in a class Ð such as making it public Ð
+                can already introduce a gadget. Furthermore, we noticed that
+                among the studied libraries, 37.5\% are not patched, leaving
+                gadgets available for future attacks.For the second analysis, we
+                manually analyze 104 deserialization vulnerabilities CVEs to
+                understand how vulnerabilities are introduced and patched in
+                real-life Java applications. Results indicate that the
+                vulnerabilities are not always completely patched or that a
+                workaround solution is proposed. With a workaround solution,
+                applications are still vulnerable since the code itself is
+                unchanged.},
+    journal = {ACM Trans. Softw. Eng. Methodol.},
+    month = feb,
+    articleno = {25},
+    numpages = {45},
+    keywords = {Serialization, deserialization, vulnerabilities, gadget, remote
+                code execution RCE},
+}
+
+@misc{apache-prefork-2.4,
+    author = {{Apache Software Foundation}},
+    title = {prefork MPM --- Apache HTTP Server Version 2.4 Documentation},
+    year = {2025},
+    howpublished = {\url{
+                    https://httpd.apache.org/docs/2.4/mod/prefork.html?utm_source=chatgpt.com
+                    }},
+    note = {Accessed: 24 April 2025},
+}
+
+@misc{nginx-inside-performance-scale-2015,
+    author = {{NGINX, Inc.}},
+    title = {Inside NGINX: How We Designed for Performance \& Scale},
+    year = {2015},
+    month = jun,
+    howpublished = {\url{
+                    https://blog.nginx.org/blog/inside-nginx-how-we-designed-for-performance-scale?utm_source=chatgpt.com
+                    }},
+    note = {Accessed: 24 April 2025},
+}
+
+@misc{glibc-dl-map-segments-h,
+    author = {{GNU C Library}},
+    title = {dl\-map\-segments.h Source Code},
+    year = {2025},
+    howpublished = {\url{
+                    https://codebrowser.dev/glibc/glibc/elf/dl-map-segments.h.html?utm_source=chatgpt.com
+                    }},
+    note = {Accessed: 24 April 2025},
+}
+
+@online{halinen-security-risks-sidecar-containers-2024,
+    author = {Aarni Halinen},
+    title = {Security Risks for Sidecar Containers in Kubernetes},
+    institution = {Aalto University},
+    year = {2024},
+    month = jan,
+    url = {https://aaltodoc.aalto.fi/items/d6febcaa-09e4-4bdd-acda-0feb49a5b9f5},
+    urldate = {2025-04-24},
+}
+
+@online{ebpf-helper-functions-2025,
+    author = {{eBPF.io}},
+    title = {Helper Functions},
+    date = {2025-01-24},
+    url = {https://docs.ebpf.io/linux/helper-function/},
+    urldate = {2025-04-24},
+}
+
+@online{ebpf-bpf-probe-read-user-2024,
+    author = {{eBPF.io}},
+    title = {Helper Function \texttt{bpf\_probe\_read\_user}},
+    date = {2024-08-25},
+    url = {https://docs.ebpf.io/linux/helper-function/bpf_probe_read_user/},
+    urldate = {2025-04-24},
+}
+
+@book{gregg-bpf-performance-tools-2019,
+    author = {Brendan Gregg},
+    title = {BPF Performance Tools: Linux System and Application Observability},
+    publisher = {Addison-Wesley Professional},
+    address = {Boston, MA},
+    year = {2019},
+    month = nov,
+    isbn = {9780136554820},
+}
+
+@online{kbuild-modules-linux-kernel-docs-2025,
+    author = {{The Linux Kernel Documentation}},
+    title = {Building External Modules},
+    year = {2025},
+    url = {https://docs.kernel.org/kbuild/modules.html?utm_source=chatgpt.com},
+    urldate = {2025-04-24},
+}
+
+
+@article{pointer-based-ds-slow,
+    author = {Chilimbi, T.M. and Hill, M.D. and Larus, J.R.},
+    journal = {Computer},
+    title = {Making pointer-based data structures cache conscious},
+    year = {2000},
+    volume = {33},
+    number = {12},
+    pages = {67-74},
+    keywords = {Data structures;Prefetching;Costs;Random access
+                memory;Hardware;Delay;Programming
+                profession;Arithmetic;Multithreading;Scheduling},
+    doi = {10.1109/2.889095},
+}
+
+@online{linux-kernel-docs-ktime-accessors-2025,
+    author = {{The Linux Kernel Documentation}},
+    title = {ktime Accessors},
+    year = {2025},
+    url = {https://docs.kernel.org/core-api/timekeeping.html#c.ktime_get},
+    urldate = {2025-04-24},
+}
+
+@online{ebpf-bpf-ktime-get-ns-2025,
+  author    = {{eBPF.io}},
+  title     = {Helper Function \texttt{bpf\_ktime\_get\_ns}},
+  date      = {2025-03-15},
+  url       = {https://docs.ebpf.io/linux/helper-function/bpf_ktime_get_ns/},
+  urldate   = {2025-04-24},
+}

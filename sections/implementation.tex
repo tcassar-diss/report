@@ -25,11 +25,11 @@ but also formally verified, so that causing the kernel to crash becomes
 impossible.\footnote{Exploits and bugs mean that this isn't impossible, but in
 practice it is extremely hard to do.} \ac{bpf} programs can also be adopted and
 applied to programs entirely transparently: no configuration files need changing
-and no business logic needs changing. \ac{bpf} is extremely restrictive, but
-this is the cost of not having to patch the kernel, which would require
-recompilation and would make it harder for developers to use \afss.
-% TODO: Cite that bpf programs can be attached without "sidecars"
-% TODO: Cite that kernel modules require recompilation
+and no business logic needs changing \cite{halinen-security-risks-sidecar-containers-2024}. \ac{bpf} is extremely restrictive, but
+this is the cost of not having to patch the kernel/using kernel modules which in
+the worst case may require recompiling the kernel
+\cite{kbuild-modules-linux-kernel-docs-2025}, 
+and would make it harder for developers to use \afss .
 
 \ac{bpf} programs are commonly written in C and compiled to \ac{bpf} bytecode.
 Developers commonly choose to write the non-\ac{bpf} components of their program
@@ -38,18 +38,12 @@ This choice of Go may seem slightly unorthodox. We believe that Go's
 excellent concurrency model, ease of use, and compatibility with \ac{bpf} via
 \texttt{ebpf-go} make it the right choice for this project. 
 
+
 \begin{figure}[ht]
-  \centering
-  \begin{tikzpicture}[node distance=1cm, auto]
-    \node[tech]              (golang) {Go};
-    \node[tech, below=of golang] (ebpfgo) {eBPF-Go};
-    \node[tech, below=of ebpfgo]  (bpf)    {eBPF};
-    \draw[->, thick] (bpf)    -- (ebpfgo);
-    \draw[->, thick] (ebpfgo) -- (golang);
-  \end{tikzpicture}
-  \caption{Tech stack layers from BPF through eBPF-Go to Go}
-  \label{fig:tech-stack}
-  \todo{make this better}
+    \centering
+    \includegraphics[width=0.8 \linewidth]{./diagrams/tech-stack.drawio.pdf} 
+    \caption{A figure showing the stack of technologies that \af is built with.}
+    \label{fig:tech-stack}
 \end{figure}
 
 It is significantly easier to develop in Go than in C owing to its runtime and other 
@@ -72,21 +66,42 @@ design phase did not specify any features which are not accessible using the
 For implementation, we used an x86 server running Ubuntu 24.04.2 with Linux
 kernel 6.8.52-generic. We used the \texttt{ebpf-go} toolchain to compile the
 \ac{bpf} code at version 0.17.1, and used Go version 1.23.2. This makes use of
-clang version 18.1.3.
+Clang version 18.1.3. This information is summarised in
+Table~\ref{tab:specs_tooling}.
 
-\todo{tabulate specs, tooling}
+\begin{table}[htbp] % 'h'ere, 't'op, 'b'ottom, 'p'age placement preference
+\centering
+\caption{Summary of System Specifications and Tooling for \af Implementation}
+\label{tab:specs_tooling}
+\begin{tabular}{ll}
+\toprule % Use \hline if not using booktabs
+\textbf{Component} & \textbf{Specification / Version} \\
+\midrule % Use \hline if not using booktabs
+Operating System      & Ubuntu 24.04.2 \\
+Kernel                & Linux 6.8.52-generic \\
+Architecture          & x86 Server \\
+eBPF Library          & ebpf-go \\
+ebpf-go Version       & 0.17.1 \\
+Frontend Language     & Go \\
+Go Version            & 1.23.2 \\
+eBPF Compiler (used by toolchain) & Clang \\
+Clang Version         & 18.1.3 \\
+eBPF Code Generator   & go2bpf (part of ebpf-go) \\
+\bottomrule % Use \hline if not using booktabs
+\end{tabular}
+\end{table}
 
 \subsection{eBPF Helper Functions}
 
 Including the \texttt{bpf/bpf\_helpers} header file gives you access to a wide
 variety of \ac{bpf} \textbf{helper functions}: functions which are written in
 the kernel instead of \ac{bpf} and provide common functionality such as reading
-data from structs. These are needed as lots of functions are unrepresentable in 
-\ac{bpf} due to the verifier's strictness. Kernel functions often have
+data from structs \cite{ebpf-helper-functions-2025, ebpf-bpf-probe-read-user-2024}. 
+These are needed as lots of functions are unrepresentable in 
+\ac{bpf} due to the verifier's strictness - in fact, \ac{bpf} is not Turing
+complete \cite{gregg-bpf-performance-tools-2019}. Kernel functions often have
 corresponding \ac{bpf} helpers which we make use of in Sections
 \ref{subsec:impl-syscall-site} and \ref{subsec:impl-find-vma}.
-% TODO: cite kernel helper functions docs
-% TODO: cite functions are unrepresentable in BPF
 
 \subsection{Core Filtering Logic}
 
@@ -240,7 +255,7 @@ identifying the first non-\ac{libc} return pointer.
 
 This approach was accurate, but too slow to be performant. Calling \texttt{bpf\_find\_vma()} is
 slow, as it walks the in-kernel \ac{vma} red-black tree. Red-black trees scale
-well, but are slow to use as they are a pointer based data structure. Moving to
+well, but are slow to use as they are a pointer based data structure \cite{pointer-based-ds-slow}. Moving to
 a child node involved loading memory which likely is not already in cache.
 Finding one syscall site often involves walking through multiple \ac{libc}
 addresses before finding the first non-\ac{libc} return pointer. When run in
@@ -249,7 +264,6 @@ verbose mode, \af collects runtime statistics
 applications like Redis has anywhere from 3-7 stack frames with return pointers 
 within \ac{libc}. This will result in 4-8 lookups per syscall (including the
 first non-\ac{libc} return pointer), detrimentally affecting performance.
-% TODO: cite pointer based data structures slow
 
 \subsubsection{Optimising Syscall Site
 Finding}\label{subsubsec:impl-find-site-opt}
@@ -328,16 +342,14 @@ the syscall site is done by traversing the \ac{vma} red-black tree in the
 kernel. This is done by using the \texttt{bpf\_find\_vma()} helper, which was used
 in the unoptimised implementation of the syscall site identification logic.
 
-\texttt{bpf\_find\_vma()} returns the \texttt{vma\_struct} associated with the
-return pointer's address. The \texttt{vma\_struct} is a kernel data structure
+\texttt{bpf\_find\_vma()} returns the \texttt{vm\_area} struct associated with the
+return pointer's address. The \texttt{vm\_area} struct is a kernel data structure
 which holds information about the process's \ac{vma} including addresses,
 permissions, and the file which backs the memory. Here, we are interested in the
 file which backs the memory region. We read this by supplying a function
 to the \texttt{bpf\_find\_vma()} helper which is called when the right
-\texttt{vma\_struct} is found. Then, we use \texttt{bpf\_probe\_read()} to make
+\texttt{vm\_area} struct is found. Then, we use \texttt{bpf\_probe\_read()} to make
 the series of reads needed to find the filename
-
-\todo{add figure showing reading the relevant structs}
 
 We then use the filename as a key in another \ac{bpf} map - the ``whitelists''
 map. This is a \texttt{BPF\_MAP\_TYPE\_HASH} which associates strings (filenames
@@ -383,9 +395,14 @@ userspace when a syscall has tripped the filter. The ringbuffer is a thread-safe
 \ac{bpf} data structure which efficiently transfers data between the kernel and
 userspace. When a disallowed syscall happens, a struct containing syscall
 number and offending \ac{pid} is written to the ringbuffer and quickly read by
-userspace.
+userspace. This procedure is visualised in Figure~\ref{fig:intervention-flowchart}.
 
-\todo{flowchart/swimlane showing intervention strat for each config mode}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8 \linewidth]{./diagrams/profiling-flow.drawio.pdf} 
+\caption{Flowchart illustrating the intervention strategies based on the configured mode when a non-whitelisted syscall occurs. Actions are separated into BPF (Kernel) and Frontend (Userspace) lanes.}
+\label{fig:intervention-flowchart}
+\end{figure}
 
 In warn mode, the \ac{bpf} program will then return with exit code 0. In ``kill
 all'' mode, \af uses \texttt{BPF\_SEND\_SIGNAL()} to kill the current process
@@ -420,7 +437,7 @@ of the stats map array at index $i$ by one.
 
 While simple, this allows for fine-grained visibility into the \ac{bpf} program.
 A stat is recorded at every point the program could exit - a list of recorded
-stats are included in Appendix~\ref{lst:stat-enum}. Using an array over a
+stats are included in Listing~\ref{lst:stat-enum}. Using an array over a
 ringbuffer was done to reduce code complexity in the frontend (as no goroutine
 reading the ringbuffer is needed), and we do not need the real time capabilities
 of a ringbuffer.
@@ -443,7 +460,7 @@ defined.
 
 We also instrumented \af to report profiling information for each stage of the
 filtering process. An profile for a ``Hello, World'' application is provided in 
-Appenix~\ref{tab:profile-info}. Profiling information was used to identify that
+Appendix~\ref{tab:profile-info}. Profiling information was used to identify that
 finding the syscall site was the slowest step of \af before the optimisation
 discussed in Section~\ref{subsubsec:impl-find-site-opt} was applied.
 
@@ -457,18 +474,80 @@ profiling information is recorded for that execution.
 Timestamps were recorded after every stage of the filtering using the
 \texttt{bpf\_ktime\_get\_ns()} helper, which returned the \textbf{kernel time}:
 the number of nanoseconds elapsed since boot. This is a monotonically increasing
-counter which is not affected by leap seconds and other timing oddities. In the
+counter which is not affected by leap seconds and other timing oddities \cite{ebpf-bpf-ktime-get-ns-2025}. In the
 case that a failure occurs during one of the stages of \afss,~the profiling data
-is discarded.
-% TODO: cite ktime is monotonic, and that normal clocks are bad for timing.
+is discarded. This process is visualised in Figure~\ref{fig:profiling-data-flow}
 
-% TODO: profiling flow diagram
-%   profiling info gathered during execution
-%   written to ringbuffer (or discarded if an error occurs during execution)
-%   read on frontend
-%   diffs calculated
-%   written to exec-profile.csv
-\todo{profiling flow diagram}
+
+\begin{figure}[hbpt]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm and 1.5cm, % Vertical and horizontal spacing
+    auto,
+    % Define node styles
+    process/.style={ % Main process steps
+        rectangle, 
+        draw, 
+        thick,
+        text centered, 
+        rounded corners, 
+        minimum height=2em, 
+        minimum width=8em,
+        fill=blue!10, % Light blue fill for regular steps
+        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt} % Subtle shadow
+    },
+    decision/.style={ % Decision point (error check)
+        diamond, 
+        draw, 
+        thick, 
+        text centered, 
+        aspect=2, 
+        minimum size=1cm,
+        inner sep=0pt,
+        fill=orange!30, % Orange highlight for decision
+        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt}
+    },
+    io/.style={ % Input/Output (like the final CSV)
+        rectangle, % Changed from cylinder for minimalism, keeping a distinct color
+        draw,
+        thick,
+        text centered,
+        rounded corners,
+        minimum height=2em,
+        minimum width=8em,
+        fill=green!20, % Green highlight for final output
+        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt}
+    },
+    arrow/.style={ % Arrow style
+        -{Latex[length=2mm, width=1.5mm]}, % Nicer arrow head
+        thick
+    }
+]
+
+% Define nodes
+\node (gather) [process] {Gather profile info during execution};
+\node (check) [decision, below=of gather] {Error occurred?};
+\node (write_rb) [process, below left=1cm and 0.5cm of check] {Write to ringbuffer}; % Adjusted positioning
+\node (read_fe) [process, below=of write_rb] {Read on frontend};
+\node (calc_diff) [process, below=of read_fe] {Calculate diffs};
+\node (write_csv) [io, below=of calc_diff] {Write to exec-profile.csv};
+
+% Define connections (arrows)
+\draw [arrow] (gather) -- (check);
+\draw [arrow] (check) -- node[anchor=south east, xshift=-2mm] {No} (write_rb);
+% The "Yes" path implicitly leads to discarding, so we don't draw an explicit "Discard" box for minimalism
+\draw [arrow] (check) -- node[anchor=south west, xshift=2mm] {Yes (Discard)} ++(2.5,0) coordinate(discard_point); % Arrow points right, implies discard
+\node[right=0.2cm of discard_point, text=red!80!black] {}; % Add invisible node to push text right if needed, or keep simple
+
+\draw [arrow] (write_rb) -- (read_fe);
+\draw [arrow] (read_fe) -- (calc_diff);
+\draw [arrow] (calc_diff) -- (write_csv);
+
+\end{tikzpicture}
+\caption{A flowchart showing how profiling data is written to and parsed by
+userspace.}
+\label{fig:profiling-data-flow}
+\end{figure}
 
 Writing to a ringbuffer requires locking, and is therefore an expensive
 operation. Therefore, we only included the code needed to profile the
@@ -491,9 +570,148 @@ filter.
 Accounting for roughly 60\% of the project's 5,100 \ac{loc}, the frontend handles 
 everything from the \ac{cli} and BPF  map/data structure initialisation, to 
 launching the program, capturing live data via ringbuffers, and inspecting 
-map contents after execution. 
+map contents after execution. A flow chart showing an overview of the frontend's
+functionality is provided in Figure~\ref{fig:frontend-flowchart}.
 
-\todo{frontend block diagram}
+\begin{figure}[htbp]
+\centering
+\scalebox{0.5}{%
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.5cm, % Vertical and horizontal spacing
+    auto,
+    % Define node styles
+    base_style/.style={ % Base style for consistency
+        draw, thick, text centered, rounded corners,
+        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt},
+        align=center, inner sep=4pt % Added padding
+    },
+    process/.style={ % Standard process steps
+        base_style, rectangle, minimum height=2.8em, minimum width=11em,
+        fill=blue!10
+    },
+    decision/.style={ % Decision points
+        base_style, diamond, aspect=1.8, minimum size=1cm,
+        fill=orange!30
+    },
+    io/.style={ % Input/Output steps
+        base_style, trapezium, trapezium left angle=70, trapezium right angle=110, % Input/Output shape
+        minimum height=2.8em, minimum width=10em,
+        fill=cyan!10
+    },
+    action/.style={ % Specific actions like killing/logging
+        base_style, rectangle, minimum height=2.8em, minimum width=11em,
+        fill=green!20
+    },
+    parallel/.style={ % For background tasks (goroutine)
+        base_style, rectangle, dashed, draw=blue, fill=blue!5,
+        minimum width=12em
+    },
+    startstop/.style={ % For start/end points
+        base_style, cloud, cloud puffs=15, cloud puff arc=120, aspect=2,
+        minimum height=2.5em,
+        fill=gray!20
+    },
+    arrow/.style={ % Arrow style
+        -{Latex[length=2.5mm, width=2mm]}, % Slightly larger arrow head
+        thick
+    },
+    comment/.style={ % Style for annotations
+        font=\tiny\itshape, text=gray!80!black
+    }
+]
+
+% --- Nodes ---
+\node (start) [startstop] {Start Frontend};
+\node (cli) [io, below=of start] {Parse CLI Args \& Flags\\(Executable, Whitelist, Mode)};
+\node (init_maps) [process, below=of cli] {Initialize BPF Maps\\(Load Whitelists)};
+\node (set_cfg) [process, below=of init_maps] {Set 'cfg\_map' in BPF\\based on flags};
+\node (check_mode) [decision, below=of set_cfg] {Warn or\\Kill-All mode?};
+
+% Branch for Goroutine
+\node (spawn_listener) [parallel, below left=1.5cm and 0.2cm of check_mode] {Spawn Goroutine:\\Listen on Ringbuffer};
+
+% Node to prepare spawning (common path)
+\node (prep_spawn) [process, below right=1.5cm and 0.2cm of check_mode] {Prepare to Spawn Executable};
+
+% Coordinate to join paths after decision
+\node (join_spawn) [coordinate, below=1cm of prep_spawn] {};
+
+% Main execution flow after decision
+\node (do_spawn) [process, below=0.5cm of join_spawn] {Spawn Target Executable\\(via os/exec, get Context)};
+\node (deprivilege) [process, below=of do_spawn] {Deprivilege Spawned Process\\(Set UID to non-root)};
+\node (get_pid) [process, below=of deprivilege] {Get PID of Spawned Process};
+\node (find_libc) [process, below=of get_pid] {Find libc Address Range\\(/proc/PID/maps + Retries)};
+\node (populate_libc) [process, below=of find_libc] {Populate 'libc\_ranges' Map};
+\node (add_follow) [process, below=of populate_libc] {Add PID to 'follow\_map'\\(Activates filtering)};
+
+\node (wait_exit) [process, below=of add_follow, minimum height=3.5em] {Wait for Events:\\(Process Exit, Signal, Error)\\via Context.Done()};
+
+% Parallel Ringbuffer Handling (visualized separately)
+% \node (handle_ringbuf) [parallel, right=4cm of wait_exit, yshift=-1cm] {Goroutine (if active):\\Read Ringbuffer};
+% \node (log_or_kill) [action, below=of handle_ringbuf] {If packet received:\\Log Event (Warn) or\\Kill Mapped PIDs (Kill-All)};
+
+\node (handle_ringbuf) [parallel, left=4cm of wait_exit, yshift=+1cm] {
+  Goroutine (if active):\\Read Ringbuffer
+};
+\node (log_or_kill) [action, below=of handle_ringbuf] {
+  If packet received:\\Log Event (Warn) or\\Kill Mapped PIDs (Kill-All)
+};
+
+% Exit path
+\node (cancel_ctx) [process, below=of wait_exit] {Event Occurs:\\Cancel Context};
+\node (cleanup) [process, below=of cancel_ctx] {Goroutines Receive Done Signal,\\Perform Cleanup};
+\node (stats) [io, below=of cleanup] {Optional: Read 'stats\_map'\\Dump to stdout (if --verbose)};
+\node (end) [startstop, below=of stats] {End Frontend\\(Kernel auto-cleans maps/progs)};
+
+% --- Arrows ---
+\draw [arrow] (start) -- (cli);
+\draw [arrow] (cli) -- (init_maps);
+\draw [arrow] (init_maps) -- (set_cfg);
+\draw [arrow] (set_cfg) -- (check_mode);
+
+% Branching arrows
+\draw [arrow] (check_mode.west) -- node[midway, above left, pos=0.7] {Yes} (spawn_listener);
+\draw [arrow] (check_mode.east) -- node[midway, above right, pos=0.7] {No} (prep_spawn);
+
+% Joining paths before spawning
+% Use |- or -| for right-angle turns if needed, or direct connection
+\draw [arrow] (spawn_listener) -- (spawn_listener |- join_spawn) -- (join_spawn); % Path from listener to join point
+\draw [arrow] (prep_spawn) -- (join_spawn); % Path from no-listener branch
+
+% Main flow arrows
+\draw [arrow] (join_spawn) -- (do_spawn);
+\draw [arrow] (do_spawn) -- (deprivilege);
+\draw [arrow] (deprivilege) -- (get_pid);
+\draw [arrow] (get_pid) -- (find_libc);
+\draw [arrow] (find_libc) -- (populate_libc);
+\draw [arrow] (populate_libc) -- (add_follow);
+\draw [arrow] (add_follow) -- (wait_exit);
+
+% Exit flow arrows
+\draw [arrow] (wait_exit) -- (cancel_ctx);
+\draw [arrow] (cancel_ctx) -- (cleanup);
+\draw [arrow] (cleanup) -- (stats);
+\draw [arrow] (stats) -- (end);
+
+% Arrows related to parallel goroutine
+% Dashed arrow indicates it runs alongside the main wait state
+% \draw [arrow, dashed] (spawn_listener) -- (handle_ringbuf) node[midway, above, sloped, comment] {Runs in Parallel};
+% \draw [arrow] (handle_ringbuf) -- (log_or_kill);
+
+\draw [arrow, dashed] (spawn_listener) -- (handle_ringbuf)
+  node[midway, above, sloped, comment] {Runs in Parallel};
+\draw [arrow] (handle_ringbuf) -- (log_or_kill);
+
+% Dashed red arrow shows context cancellation signal stopping the goroutine
+% \draw [arrow, red, dashed] (cancel_ctx.west) -| (handle_ringbuf.east) node[midway, below right, comment, text=red] {Context Cancelled};
+\draw [arrow, red, dashed] (cancel_ctx.west) |- (handle_ringbuf.east)
+  node[midway, above left, comment, text=red] {Context Cancelled};
+
+\end{tikzpicture}
+}
+\caption{Overview Flowchart of the Go Frontend Execution Logic.}
+\label{fig:frontend-flowchart}
+\end{figure}
 
 The \ac{cli} is built using the \texttt{urfave/cli/v2} Go framework. It provides
 the main command to filter an application, ``\af'', which also takes a whitelist
@@ -511,7 +729,6 @@ application as root. This is intended purely for development, as if exploited,
 an application with root privileges would just be able to detach \af from its
 tracepoint rendering it useless.
 
-\todo{frontend execution flow diagram}
 
 \subsubsection{Handling different configuration options}
 
@@ -546,7 +763,8 @@ does not protect the filtered application}.
 
 \subsubsection{Spawning the executable} \label{subsubsec:spawning-exec}
 
-\todo{check whether processes or users have the CAP\_SYS \_ADMIN privlege}
+\todo{I've oversimplified the capabilities here a bit - should I be more
+detailed?}
 To spawn the executable, we use the \texttt{os/exec} package from the Go
 standard library to create a \texttt{Command} with the executable and arguments
 passed in through the \ac{cli}. This was done with the \texttt{CommandContext()}
@@ -582,11 +800,6 @@ can alter key \ac{bpf} data structures.
 % 3. By default, this means that the filtered application will have
 % CAP\_SYS\_ADMIN privileges, and therefore an attacker could detach the filter
 
-\todo{check this is true! if prctl in whitelist then definitely true. Can prctl
-be used for anything else? can anything else be used to (un)mount bpf programs?}
-
-We uses the \texttt{Command.Start()}
-
 \subsubsection{Configuring the \texttt{libc} map}
 Once the process is spawned, the frontend can access its \ac{pid} stored in the
 \texttt{Command.Process} struct. We implemented a function, 
@@ -596,14 +809,14 @@ address of \ac{libc}.
 
 \texttt{findLibc()} finds the start and end address of \ac{libc} by parsing the
 \texttt{/proc/PID/maps} pseudofile in userspace. Each line of \texttt{/proc/PID/maps}
-contains information about \texttt{vma\_struct} in the process's \ac{vma}. We
+contains information about \texttt{vm\_area} struct in the process's \ac{vma}. We
 built a regular expression to match each line of \texttt{/proc/PID/maps}, and
-used match groups to extract the \texttt{vma\_struct}'s start and end address.
+used match groups to extract the \texttt{vm\_area} struct's start and end address.
 We then tracked which the smallest and largest start/end addresses we saw was
 and set these to be \acg{libc} start and end addresses.
 
 We found in development that we would sometimes begin parsing the pseudofile
-before each \texttt{vma\_struct} had been loaded by the linker. This lead to
+before each \texttt{vm\_area} struct had been loaded by the linker. This lead to
 \af exiting reporting that \textit{no \ac{libc} addresses were found}, and in
 the worst case, confusing bugs were syscall sites were incorrectly being marked as 
 having come from \ac{libc}. This was happening as parsing started while the
@@ -614,7 +827,7 @@ The fix here was to add retry logic to the parsing. If no \ac{libc} was found,
 then we increment a retry counter, close the file, and retry parsing. Each time
 we parse, we count the number of lines in the pseudofile: if \ac{libc} is found,
 then we close and reopen the file and check its line count. If they are the
-same, then we know we have accounted for every \texttt{vma\_struct} that was
+same, then we know we have accounted for every \texttt{vm\_area} struct that was
 mapped to \ac{libc}.
 
 
@@ -626,11 +839,10 @@ to handle graceful exits.
 
 Each long-lived function\footnote{Examples of long-lived functions are functions
 that read from ringbuffers in an infinite loop and child processes spawned using
-\texttt{os/exec}.} is passed a \texttt{context.Context} interface as a
-parameter. These functions all wait to receive on the \texttt{Context.Done()}
-channel: when they receive word that the context is done, we configured the
-functions to clean up resources and exit. 
-\todo{change the phrasing: cannot pass an interface!}
+\texttt{os/exec}.} is passed an objecting implementing the 
+\texttt{context.Context} interface as a parameter. These functions all wait to
+receive on the \texttt{Context.Done()} channel: when they receive word that the
+context is done, we configured the functions to clean up resources and exit. 
 
 When the filtered application exits, receives a \texttt{SIGKILL} or 
 \texttt{SIGINT}, or \af encounters an error it cannot recover from, we 
@@ -657,7 +869,7 @@ discussed in detail.
 
 Generating whitelists for \af involved a lot of the same steps as the filtering
 program, so did not require much engineering effort. To be able to reuse code,
-we structured our codebase carefully: \ac{bpf} maps and common data structures
+we structured our code base carefully: \ac{bpf} maps and common data structures
 were kept in the \texttt{bpf/} directory, with the filtering program and
 whitelist generation program kept in \texttt{bpf/filter/} and
 \texttt{bpf/wlgen/} directories respectively. This exercise was complicated by
@@ -702,13 +914,13 @@ and flattened the (\afss)~ whitelist passed to \texttt{af-seccomp} via the
 \ac{cli}, and added an \texttt{libseccomp.Allow} rule for each syscall number in
 the whitelist.
 
-\subsubsection{Calculating Privilege Reduction}
-
-\todo{how to justify the \texttt{syso} design decisions? theyre silly because i
+\todo{how to justify the \texttt{syso} design decisions? they are silly because i
 did them first!}
 
+\subsubsection{Calculating Privilege Reduction}
+
 To calculate the level privilege reduction gained by using \af we implemented a
-tool called \texttt{syso}. It is an evaluatory tool which uses dynamic analysis
+tool called \texttt{syso}. It is an evaluation tool which uses dynamic analysis
 to track which shared libraries are making which syscalls. It does
 stack-unwinding in kernel, and aligns the addresses with values in
 \texttt{/proc/PID/maps}. \texttt{syso} also counts the numbers of each syscall 

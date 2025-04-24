@@ -16,7 +16,7 @@
 \renewcommand\maketitlehookd{\vfill\null}
 \usepackage{array}
 
-\usepackage{biblatex}
+\usepackage[backend=bibtex,bibencoding=ascii]{biblatex}
 \addbibresource{main.bib}
 
 \usepackage[hidelinks]{hyperref}
@@ -26,7 +26,6 @@
 \usepackage{caption}
 \usepackage{minted}
 
-% TODO: add figure/table showing that all syscalls are actually made from libc.
 \usepackage{listings}
 \usepackage{todonotes}
 \usepackage{mathptmx}
@@ -88,7 +87,9 @@
     semithick
   }
 }
-\usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc}
+\usetikzlibrary{ positioning, arrows.meta, calc, shapes.geometric, shadows,
+decorations.pathreplacing, calligraphy, shapes.symbols}
+
 \hypersetup{breaklinks=true}
 
 \addtolength{\oddsidemargin}{-0.4in}
@@ -101,7 +102,7 @@
 %   also shouldn't need to define a genitive: figure out how to do
 %   properly!
 \newcommand{\af}{\texttt{addrfilter }}
-\newcommand{\afgen}{\texttt{addrfilter }}
+\newcommand{\afgen}{\texttt{addrfilter generate}}
 \newcommand{\afss}{\texttt{addrfilter}}
 \newcommand{\afg}{\texttt{addrfilter}'s{ }}
 %
@@ -140,14 +141,14 @@
     long=Application Programming Interface,
 }
 
-\DeclareAcronym{CPU}{
+\DeclareAcronym{cpu}{
     short=CPU,
     long=Central Processing Unit,
 }
 
 \DeclareAcronym{bpf}{
     short=eBPF,
-    long= The Extended Berkley Packet Filter,
+    long= Extended Berkley Packet Filter,
     short-indefinite = an
 }
 
@@ -156,7 +157,7 @@
     long = Input/Output,
 }
 
-\DeclareAcronym{OS}{ 
+\DeclareAcronym{os}{ 
     short = OS,
     long = Operating System,
 }
@@ -239,11 +240,6 @@
     long = Process ID,
 }
 
-\DeclareAcronym{toml} {
-    short = TOML,
-    long = Tom's Ordinary Markup Language
-}
-
 \DeclareAcronym{core}{
     short = {CO-RE},
     long = {Compile Once, Run Anywhere}
@@ -268,3 +264,13 @@
     short = CLI,
     long = Command Line Interface
 }
+
+\DeclareAcronym{polp}{
+    short = PoLP,
+    long = Principle of Least Privilege
+}
+
+\DeclareAcronym{pie}{
+    short = PIE,
+    long = Position Independent Executable
+} 

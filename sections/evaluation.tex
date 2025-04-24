@@ -1,30 +1,148 @@
 \section{Evaluation}\label{sec:evaluation}
 
-In this section, we show that using addrfilter over seccomp
-results in a more secure application with minimal performance penalties. We
-look to answer two questions:
+In this section we look to show that \af is able to significantly reduce the
+privilege of the applications that it protects, often more so than seccomp. We 
+quantify the additional runtime cost that developers can expect from using \af 
+instead of seccomp, and also look to prove the correctness of \afss.
 
-\begin{enumerate}
-    \item What degree of \textbf{privilege reduction} does addrfilter
-        provide when compared to seccomp?
-    \item How much does using addrfilter cost in terms of application
-        slowdown?
-\end{enumerate}
-
-The evaluation presented here is as rigorous as possible. For each
-experiment, data was gathered on an unfiltered application, a seccomp-filtered 
-application, and an addrfilter-filtered application. This provides relative 
-comparisons with the state of the art as well as absolute comparisons with a
-baseline. %XXX: GIVE SOME NUMBERS
-
-After running a broad range of benchmarks, we were able to determine that 
-system call frequency was the best indicator of application slowdown. Using 
-this information, we stressed addrfilter to see how bad the slowdown could
-become. We augmented addrfilter with profiling information to determine system
-bottlenecks see if a speedup was possible.
-
-A new analysis tool was created: \texttt{syso}. \texttt{syso} gives information
-about the number of system calls an application makes, as well as which
-libraries are making which system calls. This allows 
+We start by sharing our test environment and the version of \af we used to
+aid reproducibility. We then move on to showing that \af is correct: that
+is, it correctly identifies which shared library made which syscall without
+affecting normal syscall function. Having shown correctness, we move on to
+security evaluation, where we define a privilege reduction metric and apply the
+metric to a set of application benchmarks. We finish with performance analysis,
+where we compare the runtime cost of \af to that of using a seccomp filter.
 
 \subsection{Test Environment}
+
+Our test environment was the same as our development environment outlined in
+Section~\ref{subsection:tech-stack}. We used a Linux server (kernel version
+6.8.52-generic) running Ubuntu 24.04.2 with an Intel two Intel Xeon
+Gold 5220R x86 processors clocked at 2.20GHz. Each socket has 24 physical 
+cores with two threads per core, resulting in a total of 96 logical cores.
+
+The server has 64 GB of memory configured at 2666 MT/s  with 2 terabytes
+of storage supporting buffered reads at 515 MB/s, measured with 
+\texttt{sudo hdparm -t /dev/sda}.
+
+The kernel is being run with out-of-the-box settings - \ac{aslr}, stack
+canaries, and other default security features remained enabled for all tests.
+\af was run as root, but as mentioned in Section~\ref{subsubsec:spawning-exec},
+applications were not run with root privileges.
+
+\af was compiled with the Go compiler at version 1.23.2 with no flags or
+environment variables explicitly set. \ac{bpf} was
+compiled using the \texttt{ebpf-go} toolchain from the Cilium project at version
+v0.17.1. Under the hood, this relies on LLVM: our server was configured with
+clang version 18.1.3. We used \af release version 1.0.0, which can be found on
+GitHub at
+\href{https://www.github.com/tcassar-diss/addrfilter}{www.github.com/tcassar-diss/addrfilter}\todo{link
+to the tag and get commit hash} (commit hash \texttt{dc236e2}).
+
+For experiments involving data transfer over a network (such as
+\texttt{redis-benchmark} and \texttt{wrk} for nginx), the server and benchmark
+client were both run on the same server to avoid the network becoming a bottleneck.
+
+While experiments were performed on server-grade hardware, the results should be
+generalisable to user-oriented systems. Benchmark results are always reported
+with \af enabled and disabled to help the reader understand relative
+performance differences.
+
+\subsection{Benchmark Selection}
+
+% TODO: cite
+%    - Redis in memory kv store
+%    - K8s used in production for orchestrated deployments
+
+Five benchmarks were selected to evaluate addrfilter for security and
+performance. These were \texttt{wrk} for nginx, \texttt{redis-benchmark} for
+redis, \texttt{fio} to measure filesystem performance, and \texttt{kube-burner}
+for \ac{k8s}. 
+
+% TODO: add optimus, syspart, sysfilter citations
+These benchmarks are representative of typical server applications.
+\texttt{redis-benchmark} and \texttt{wrk} appear in recent syscall literature 
+and are included to aid comparison with other novel filtering frameworks 
+\cite{OPTIMUS, SYSPART, SYSFILTER}. \texttt{fio} is used to measure filesystem 
+performance, and \texttt{kube-burner} is used to measure the performance of \ac{k8s} - 
+a common service in production code. 
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ccr}
+        \toprule
+        Benchmark & OS Subsystem & Syscall Frequency (K/s) \\
+        \midrule
+        \texttt{redis-bench} & Memory & 577 \\
+        \texttt{wrk} & Network & TODO \\
+        \texttt{fio} & Filesystem & TODO \\
+        \texttt{kube-burner} & Orchestration & TODO \\
+        \texttt{NPB-OMP} & \ac{cpu} & TODO \\
+    \end{tabular}
+    \caption{List of benchmarks and the OS subsystem they
+    stress}\label{table:benchmark-selection}\todo{get syscall freqs}
+\end{table}
+
+
+Table \ref{table:benchmark-selection} summarises which \ac{os}
+subsystems and functionalities each benchmark stresses and provides the system call frequency of each
+benchmark (unfiltered). As discussed in Section \ref{subsubsec:slowdown}, system
+call frequency is a good predictor of slowdown. Here, subsystem can refer to how
+the \ac{os} interacts with some physical hardware (e.g. memory), or something
+more abstract e.g. orchestration. The \textit{orchestration} subsystem here
+refers to features of the \ac{os} used in orchestration e.g. cgroups,
+namespaces, interaction with iptables, etc.
+
+% TODO: cite cgroups, namespaces, iptables in orchestration
+
+\subsection{Validation}
+
+\todo{reword with gemini}
+To validate that \af works correctly a combination of strategies were
+used. Manual testing on simple \textit{"Hello, World"} style applications was
+used extensively in development to ensure that the filtered application was
+killed when it made a non-whitelisted syscall. We then wrote a collection of
+shared libraries which contained functions which wrapped syscalls, and rewrote
+our \textit{"Hello, World"} style application, provided in
+Appendix~\todo{reference linkage}. This let us reason about the
+syscalls shared libraries can make. When we manually removed a syscall from the
+shared libraries whitelist, we saw that the process was killed. This verified
+that \af works on small examples.
+\todo{Do this linkage example}
+
+Once \af was showing correct behaviour in development, it was tested on real 
+applications. We used \texttt{addrfilter generate} to create system call
+whitelists for each of the benchmarked applications.
+Since dynamic analysis can lead to incomplete whitelists, we ran each benchmark
+ten times with addrfilter enabled and made sure that no unexpected syscalls were
+made. We then manually removed some system calls from the generated whitelist and
+ensured that this lead to the app being killed.
+
+% TODO: Cite linux test project
+Having showed that the filtering functionality was effective, we then ensured
+that system call behaviour had not been adversely affected by \af. To do this, we
+turned to the \acg{ltp} syscall test suite. \ac{ltp} was installed according to
+the
+\href{https://linux-test-project.readthedocs.io/en/latest/users/quick_start.html}{documentation}.
+
+We ran the syscall test suite using the command \texttt{/opt/ltp/kirk -f ltp -r
+syscalls} with no filtering enabled for some baseline results. We then ran
+\texttt{addrfilter generate /opt/ltp/kirk ...} to generate the relevant
+whitelists. We supplied this whitelist as an argument to addrfilter, and ran
+\texttt{addrfilter ./whitelist.json /opt/ltp/kirk ...} to run the test suite
+with addrfilter enabled. The test results during whitelist generation and with
+filtering enabled were identical to the baseline tests, showing that \textbf{addrfilter
+has no adverse effects on system call correctness}.\todo{table showing test
+failures with and without \af}
+
+\subsection{Security Evaluation}
+
+Having shown the correctness of \af and justified the suite of benchmarks
+we want to use, we can begin to reason about the \textbf{security improvements}
+that \af provides.
+
+\subsection{Performance Evaluation}\label{subsec:perf-eval}
+
+\subsubsection{Profiling}
+
+\subsubsection{What causes slowdown}\label{subsubsec:slowdown}
