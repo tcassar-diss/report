@@ -1,0 +1,12 @@
+# This file defines the size of workload to use for each
+# microbenchmark
+
+ft	C
+mg	C
+sp	C
+lu	C
+bt	C
+is	C
+ep	C
+cg	C
+ua	C

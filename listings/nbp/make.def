@@ -1,0 +1,22 @@
+# This file defines compilers and build options for NPB
+
+FC=gfortran  # version 13.3.0
+FLINK=$(FC)
+F_LIB=
+F_INC=
+FFLAGS=-O3 -fopenmp
+FLINKFLAGS=$(FFLAGS)
+
+CC=gcc
+CLINK= $(CC)
+C_LIB= -lm
+C_INC=
+CFLAGS=-O3 -fopenmp
+CLINKFLAGS=$(CFLAGS)
+
+UCC=gcc
+
+BINDIR=../bin
+
+RAND= randi8
+WTIME= wtime.c
