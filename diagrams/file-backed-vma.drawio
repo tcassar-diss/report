@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="oteSzGPQdlDYIQ9Bffow-56" value="" style="group" vertex="1" connectable="0" parent="1">
+        <mxCell id="oteSzGPQdlDYIQ9Bffow-56" value="" style="group;" vertex="1" connectable="0" parent="1">
           <mxGeometry x="130" y="220" width="600" height="200" as="geometry" />
         </mxCell>
         <mxCell id="oteSzGPQdlDYIQ9Bffow-5" value="" style="group;fillColor=#60a917;strokeColor=#2D7600;fontColor=#ffffff;" vertex="1" connectable="0" parent="oteSzGPQdlDYIQ9Bffow-56">
@@ -138,7 +138,7 @@
         <mxCell id="oteSzGPQdlDYIQ9Bffow-44" value="0xFFFFFFFFFFFF" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="oteSzGPQdlDYIQ9Bffow-56">
           <mxGeometry x="518.9189189189188" y="78.26086956521738" width="81.08108108108108" height="26.08695652173913" as="geometry" />
         </mxCell>
-        <mxCell id="oteSzGPQdlDYIQ9Bffow-53" value="" style="group" vertex="1" connectable="0" parent="oteSzGPQdlDYIQ9Bffow-56">
+        <mxCell id="oteSzGPQdlDYIQ9Bffow-53" value="" style="group;" vertex="1" connectable="0" parent="oteSzGPQdlDYIQ9Bffow-56">
           <mxGeometry x="312.16216216216213" y="139.1304347826087" width="48.648648648648646" height="60.869565217391305" as="geometry" />
         </mxCell>
         <mxCell id="oteSzGPQdlDYIQ9Bffow-48" value="" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.externalEntity;container=0;" vertex="1" parent="oteSzGPQdlDYIQ9Bffow-53">

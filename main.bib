@@ -489,9 +489,90 @@
 }
 
 @online{ebpf-bpf-ktime-get-ns-2025,
-  author    = {{eBPF.io}},
-  title     = {Helper Function \texttt{bpf\_ktime\_get\_ns}},
-  date      = {2025-03-15},
-  url       = {https://docs.ebpf.io/linux/helper-function/bpf_ktime_get_ns/},
-  urldate   = {2025-04-24},
+    author = {{eBPF.io}},
+    title = {Helper Function \texttt{bpf\_ktime\_get\_ns}},
+    date = {2025-03-15},
+    url = {https://docs.ebpf.io/linux/helper-function/bpf_ktime_get_ns/},
+    urldate = {2025-04-24},
+}
+
+@article{OPTIMUS,
+    author = {Yang, Seungyong and Kang, Brent Byunghoon and Nam, Jaehyun},
+    title = {Optimus: Association-Based Dynamic System Call Filtering for
+             Container Attack Surface Reduction},
+    journal = {Journal of Cloud Computing: Advances, Systems and Applications},
+    volume = {13},
+    pages = {71},
+    year = {2024},
+    month = {Mar},
+    doi = {10.1186/s13677-024-00639-3},
+    url = {https://doi.org/10.1186/s13677-024-00639-3},
+}
+
+ @inproceedings{SYSPART,
+}= author,
+}= {Rajagopalan, Vidya Lakshmi and Kleftogiorgos, Konstantinos and
+              Gotas, Enes and Xu, Jun and Portokalidis, Georgios},
+    title = {SysPart: Automated Temporal System Call Filtering for Binaries},
+    year = {2023},
+    isbn = {9798400700507},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3576915.3623207},
+    doi = {10.1145/3576915.3623207},
+    abstract = {Restricting the system calls available to applications reduces
+                the attack surface of the kernel and limits the functionality
+                available to compromised applications. Recent approaches
+                automatically identify the system calls required by programs to
+                block unneeded ones. For servers, they even consider different
+                phases of execution to tighten restrictions after initialization
+                completes. However, they require access to the source code for
+                applications and libraries, depend on users identifying when the
+                server transitions from initialization to serving clients, or do
+                not account for dynamically-loaded libraries. This paper
+                introduces SYSPART, an automatic system-call filtering system
+                designed for binary-only server programs that addresses the above
+                limitations. Using a novel algorithm that combines static and
+                dynamic analysis, SYSPART identifies the serving phases of all
+                working threads of a server. Static analysis is used to compute
+                the system calls required during the various serving phases in a
+                sound manner, and dynamic observations are only used to
+                complement static resolution of dynamically-loaded libraries when
+                necessary. We evaluated SYSPART using six popular servers on
+                x86-64 Linux to demonstrate its effectiveness in automatically
+                identifying serving phases, generating accurate system-call
+                filters, and mitigating attacks. Our results show that SYSPART
+                outperforms prior binary-only approaches and performs comparably
+                to source-code approaches.},
+    booktitle = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and
+                 Communications Security},
+    pages = {1979¿1993},
+    numpages = {15},
+    keywords = {attack-surface reduction, binary analysis, exploit mitigation,
+                system-call filtering, temporal},
+    location = {Copenhagen, Denmark},
+    series = {CCS '23},
+}
+
+@inproceedings{SYSFILTER,
+    author = {Nicholas DeMarinis and Kent Williams-King and Di Jin and Rodrigo
+              Fonseca and Vasileios P. Kemerlis},
+    title = {sysfilter: Automated System Call Filtering for Commodity Software},
+    booktitle = {23rd International Symposium on Research in Attacks, Intrusions
+                 and Defenses (RAID 2020)},
+    year = {2020},
+    isbn = {978-1-939133-18-2},
+    address = {San Sebastian},
+    pages = {459--474},
+    url = {https://www.usenix.org/conference/raid2020/presentation/demarinis},
+    publisher = {USENIX Association},
+    month = oct,
+}
+
+@misc{LINUX_TEST_PROJECT,
+    author = {{The Linux Test Project}},
+    title = {{Linux Test Project} 1.0 Documentation},
+    year = {2025},
+    howpublished = {\url{https://linux-test-project.readthedocs.io/en/latest/}},
+    note = {Accessed: 2025-04-25},
 }

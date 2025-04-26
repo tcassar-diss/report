@@ -4,10 +4,10 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="hFEI2WQQ1vhx0Jh2LQrT-162" value="" style="group" vertex="1" connectable="0" parent="1">
+        <mxCell id="hFEI2WQQ1vhx0Jh2LQrT-162" value="" style="group;" vertex="1" connectable="0" parent="1">
           <mxGeometry x="90" y="54.78" width="354.05000000000007" height="284.78999999999996" as="geometry" />
         </mxCell>
-        <mxCell id="hFEI2WQQ1vhx0Jh2LQrT-137" value="" style="group" vertex="1" connectable="0" parent="hFEI2WQQ1vhx0Jh2LQrT-162">
+        <mxCell id="hFEI2WQQ1vhx0Jh2LQrT-137" value="" style="group;" vertex="1" connectable="0" parent="hFEI2WQQ1vhx0Jh2LQrT-162">
           <mxGeometry width="354.05000000000007" height="139.57" as="geometry" />
         </mxCell>
         <mxCell id="hFEI2WQQ1vhx0Jh2LQrT-102" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Contiguously Mapped&lt;/h1&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;fontSize=9;" vertex="1" parent="hFEI2WQQ1vhx0Jh2LQrT-137">
