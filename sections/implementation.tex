@@ -178,6 +178,7 @@ number is available as the second argument in the array.
 
 \begin{table}[h!]
 \centering
+\caption{Comparison of \texttt{raw\_tp/sys\_enter} and Syscall-Specific Tracepoints for Filtering Every Syscall}
 \begin{tabular}{|p{6cm}|p{6cm}|}
 \hline
 \texttt{raw\_tp/sys\_enter} & \textbf{Syscall-Specific} \\
@@ -196,7 +197,6 @@ Arguments less easily available & Requires many attachments for all syscalls \\
 Less user-friendly interface for arguments &  \\
 \hline
 \end{tabular}
-\caption{Comparison of \texttt{raw\_tp/sys\_enter} and Syscall-Specific Tracepoints for Filtering Every Syscall}
 \label{tab:tracepoint_comparison}
 \end{table}
 
@@ -858,6 +858,14 @@ tracepoint.
 When running in \texttt{--verbose} mode, the frontend will read the contents of
 the stats map before exiting and dump its contents to \ac{stdout} as JSON.
 
+\subsection{Limitations}
+\todo{A limitations section (maybe)}
+
+% Need PID to start filtering: ~1 second where filter is inactive
+% Requires dynamically linked binaries
+% Unwinding the stack is brittle (rely on FPs; other trampolines (ftrace) can 
+% break the process; bpf_get_stack() a bit cursed.
+
 \subsection{Additional Tooling}
 
 Alongside \afss,~we also implemented additional tooling. This tooling is either
@@ -914,8 +922,8 @@ and flattened the (\afss)~ whitelist passed to \texttt{af-seccomp} via the
 \ac{cli}, and added an \texttt{libseccomp.Allow} rule for each syscall number in
 the whitelist.
 
-\todo{how to justify the \texttt{syso} design decisions? they are silly because i
-did them first!}
+\todo{how to justify the \texttt{syso} design decisions? they are silly because
+    I did them first when I was unwise!}
 
 \subsubsection{Calculating Privilege Reduction}
 
