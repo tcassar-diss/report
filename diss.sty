@@ -6,11 +6,10 @@
 \usepackage{graphicx} 
 \usepackage{acro}
 
-\usepackage[hyphens]{url}
+\usepackage[hyphens]{xurl}
 \urlstyle{same}
 
 \usepackage[parfill]{parskip}
-\usepackage{caption}
 \usepackage{titling}
 \renewcommand\maketitlehooka{\vspace*{0.15\textheight}} 
 \renewcommand\maketitlehookd{\vfill\null}
@@ -23,10 +22,10 @@
 \usepackage{adjustbox}
 \usepackage[dvipsnames]{xcolor}
 
+\usepackage{listings}
+\renewcommand{\lstlistlistingname}{List of Code Samples}
 \usepackage{caption}
 \usepackage{minted}
-
-\usepackage{listings}
 \usepackage{todonotes}
 \usepackage{mathptmx}
 \usepackage{marginnote}
@@ -134,6 +133,8 @@ decorations.pathreplacing, calligraphy, shapes.symbols}
 }
 
 \DeclareAcroEnding{possessive}{'s}{'s}
+
+
 
 
 \DeclareAcronym{api}{
@@ -273,4 +274,4 @@ decorations.pathreplacing, calligraphy, shapes.symbols}
 \DeclareAcronym{pie}{
     short = PIE,
     long = Position Independent Executable
-} 
+}
