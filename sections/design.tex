@@ -44,7 +44,7 @@ but will act to get them.
 place on the host machine. This compartmentalisation confines the \ac{ta} to the
 compromised compartment \cite{SOK}, preventing the \ac{ta} 
 from branching to an area of the address space that has a different allowed set
-of system calls. We assume that the compartmentalisation in place is at least as
+of system calls. We assume that the compartmentalisation in place is at most as
 broad as that shown in Figure~\ref{fig:compartments-around-vma}. That is, if an
 attacker gains access to a file backed region of the address space, they will be
 contained there.
@@ -365,9 +365,9 @@ behaviour.
 
 Evaluation will also involve two phases. First, we will investigate the degree
 of privilege reduction that a developer can expect from using \af on an
-application. To do this, we define a \textit{privilege metric} and compare how
-privileged seccomp-filtered applications are vs \afss-filtered applications.
-\todo{forward-ref privilege metric}
+application. To do this, we define a \textit{privilege metric} (Equation~\ref
+{eqn:privilege}) and compare how privileged seccomp-filtered applications
+are vs \afss-filtered applications.
 
 We then look to evaluate how costly \af is at runtime. To do this, we will take
 a broad array of benchmarks informed by modern syscall filtering literature and
@@ -414,11 +414,10 @@ referred to as \texttt{af-seccomp}.
 
 The final additional tool we need is an evaluation tool, \texttt{syso}.
 \texttt{syso} takes in a binary as input and prints a comparison of the 
-binary's privilege levels \todo{forward reference metric} when \af and
-seccomp are applied. It also saves some raw data to disc for further post
-processing: a JSON mapping from syscall numbers to number of times executed,
-broken down by library. An example of this is available in
-Listing~\ref{lst:syso-data-dump}.
+binary's privilege levels  when \af and seccomp are applied. It also saves
+some raw data to disc for further post processing: a JSON mapping from
+syscall numbers to number of times executed, broken down by library. An
+example of this is available in Listing~\ref{lst:syso-data-dump}.
 
 This section looked to motivate the minimalist design philosophy, threat model,
 and requirements for \af. We designed how \af should behave on each system call,
