@@ -559,7 +559,7 @@ unnecessarily complex.
 
 In the frontend, a goroutine dedicated to reading the ringbuffer was spawned.
 Upon reading data, it computes the difference between the timestamps in for each 
-packet in the ringbuffer, and writes this information to a buffered \ac{I/O} 
+packet in the ringbuffer, and writes this information to a buffered \ac{io} 
 writer (\texttt{bufio}) in Go. This writer is flushed when the profiling 
 ringbuffer is closed: either if the user presses Ctrl-C, an error during 
 reading occurs, or the program being profiled finishes/trips the syscall 
@@ -865,6 +865,10 @@ the stats map before exiting and dump its contents to \ac{stdout} as JSON.
 % Requires dynamically linked binaries
 % Unwinding the stack is brittle (rely on FPs; other trampolines (ftrace) can 
 % break the process; bpf_get_stack() a bit cursed.
+% bpf tracing interference with \af enabled: trampolines used by kfuncs can
+% interfere with how the userspace stack is represented, with 0s (normally
+% signalling the end of the stack) being placed in the middle of the stack TODO:
+% cite that lvn thing I sent to father.
 
 \subsection{Additional Tooling}
 

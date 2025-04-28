@@ -1,5 +1,61 @@
 \section{Background} \label{sec:background}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% GEMINI GENERATED PLAN
+% eBPF (Extended Berkeley Packet Filter): Explain what eBPF is, its origins (from
+% packet filtering), how it allows running sandboxed programs within the Linux
+% kernel without changing kernel source code or loading modules, and its
+% common use cases (networking, observability, security).   
+
+% Linux Tracepoints (specifically raw_tp/sys_enter): Describe what
+% tracepoints are (static kernel instrumentation points) and specifically the
+% raw_tp/sys_enter tracepoint, why it's used (to intercept every system call
+% before kernel processing), and how it differs from syscall-specific
+% tracepoints.   
+
+% System Call Invocation & Userspace Stack Unwinding: While students know
+% what syscalls are, explain the mechanism of how they are typically invoked
+% via libraries like libc. Detail the concept of stack unwinding from the
+% kernel's perspective to find the true origin of a syscall in the userspace
+% application code (the first non-libc return pointer), rather than just the
+% final libc wrapper function.
+  
+% Virtual Memory Areas (VMAs) & File-Backed Regions: Explain how a process's address
+% space is organized into VMAs in Linux, particularly how shared libraries map
+% to file-backed memory regions. Mention the role of kernel structures like
+% vma_struct  and the /proc/PID/maps pseudofile.   
+
+% Mapping Syscall Sites to Shared Libraries: Describe the process of taking a 
+% memory address (the identified syscall site from stack unwinding) and
+% using the VMA information to determine which specific shared library file
+% contains that address.   
+
+% eBPF Maps & Ringbuffers: Explain these specific eBPF data structures used
+% for communication and data storage between the eBPF kernel program and the
+% userspace frontend (e.g., storing configuration, whitelists, PIDs, passing
+% events/stats).   
+
+% eBPF Helper Functions: Briefly mention that eBPF programs cannot call
+% arbitrary kernel functions but rely on a specific set of "helper" functions
+% provided and verified by the kernel to perform tasks like reading memory, getting
+% timestamps, or accessing kernel structures.   
+
+% Seccomp: While addrfilter offers finer granularity, explaining the standard Linux mechanism seccomp (Secure
+% Computing mode) for syscall filtering provides important context and a baseline
+% for comparison.   
+
+% Software Compartmentalization: Introduce this as a security concept
+% relevant to the threat model, where different parts of an application (like
+% different shared libraries) might have different privileges or allowed
+% actions.   
+
+% Linux Capabilities (specifically CAP_SYS_ADMIN): Explain that root
+% privilege in Linux is broken down into capabilities and why CAP_SYS_ADMIN is
+% relevant for loading eBPF programs, and the security implications of
+% processes inheriting capabilities.   
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \af is a project built on a complex stack of systems technologies such as Linux
 processes, system calls, instrumentation points, \ac{bpf}, software
 compartmentalisation, and existing Linux security features such as \ac{aslr}.
@@ -146,7 +202,8 @@ behaviour \cite{LEARNING_EBPF}.
 Writing kernel code without \ac{bpf} is error-prone and typically
 requires linking to the kernel \cite{UNDERSTANDING_LINUX_KERNEL}. In contrast,
 \ac{bpf} programs can be configured to run on many instrumentation points, such
-as a syscall being triggered. \ac{bpf} also provides a \textbf{verifier} which ensures the  loaded program is safe \cite{LEARNING_EBPF}.
+as a syscall being triggered. \ac{bpf} also provides a \textbf{verifier} which
+ensures the  loaded program is safe \cite{LEARNING_EBPF}.
 This makes it impossible to cause a kernel panic (or any similarly
 catastrophic event) when writing \ac{bpf} although real-world exploits targeting the
 verifier have been seen \cite{BPF_VERIFIER_EXPLOIT}. 
@@ -154,9 +211,10 @@ verifier have been seen \cite{BPF_VERIFIER_EXPLOIT}.
 As such, \ac{bpf} is used a lot in industry for observability tooling: being able to
 dynamically load \ac{bpf} programs allows developers to instrument running processes
 without changing any configuration files or using sidecar containers \cite{SIDECAR}.
-\ac{bpf} is also often used in networking and firewalls \cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can
-be loaded onto the \ac{xdp} to inspect packets at the ``\textit{earliest possible
-point in the network driver}'' \cite{CILIUM_BPF_XDP_INTRO}. 
+\ac{bpf} is also often used in networking and firewalls 
+\cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can
+be loaded onto the \ac{xdp} to inspect packets at the ``\textit{earliest 
+possible point in the network driver}'' \cite{CILIUM_BPF_XDP_INTRO}. 
 
 \subsubsection{The Verifier}
 
