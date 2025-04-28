@@ -4,7 +4,7 @@ FLAGS=-shell-escape -pdf
 report:
 	latexmk $(FLAGS) main.tex
 
-interative:
+interactive:
 	latexmk $(FLAGS) -pvc main.tex
 
 clean:
