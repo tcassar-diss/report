@@ -69,7 +69,7 @@ kernel 6.8.52-generic. We used the \texttt{ebpf-go} toolchain to compile the
 Clang version 18.1.3. This information is summarised in
 Table~\ref{tab:specs_tooling}.
 
-\begin{table}[htbp] % 'h'ere, 't'op, 'b'ottom, 'p'age placement preference
+\begin{table}[h] % 'h'ere, 't'op, 'b'ottom, 'p'age placement preference
 \centering
 \caption{Summary of System Specifications and Tooling for \af Implementation}
 \label{tab:specs_tooling}
@@ -397,7 +397,7 @@ userspace. When a disallowed syscall happens, a struct containing syscall
 number and offending \ac{pid} is written to the ringbuffer and quickly read by
 userspace. This procedure is visualised in Figure~\ref{fig:intervention-flowchart}.
 
-\begin{figure}[htbp]
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.8 \linewidth]{./diagrams/profiling-flow.drawio.pdf} 
 \caption{Flowchart illustrating the intervention strategies based on the configured mode when a non-whitelisted syscall occurs. Actions are separated into BPF (Kernel) and Frontend (Userspace) lanes.}
@@ -573,7 +573,7 @@ launching the program, capturing live data via ringbuffers, and inspecting
 map contents after execution. A flow chart showing an overview of the frontend's
 functionality is provided in Figure~\ref{fig:frontend-flowchart}.
 
-\begin{figure}[htbp]
+\begin{figure}[h]
 \centering
 \scalebox{0.5}{%
 \begin{tikzpicture}[

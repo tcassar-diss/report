@@ -576,3 +576,126 @@
     howpublished = {\url{https://linux-test-project.readthedocs.io/en/latest/}},
     note = {Accessed: 2025-04-25},
 }
+
+
+@inproceedings{ASLR_GUARD,
+    author = {Lu, Kangjie and Song, Chengyu and Lee, Byoungyoung and Chung,
+              Simon P. and Kim, Taesoo and Lee, Wenke},
+    title = {ASLR-Guard: Stopping Address Space Leakage for Code Reuse Attacks},
+    year = {2015},
+    isbn = {9781450338325},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/2810103.2813694},
+    doi = {10.1145/2810103.2813694},
+    abstract = {A general prerequisite for a code reuse attack is that the
+                attacker needs to locate code gadgets that perform the desired
+                operations and then direct the control flow of a vulnerable
+                application to those gadgets. Address Space Layout Randomization
+                (ASLR) attempts to stop code reuse attacks by making the first
+                part of the prerequisite unsatisfiable. However, research in
+                recent years has shown that this protection is often defeated by
+                commonly existing information leaks, which provides attackers
+                clues about the whereabouts of certain code gadgets. In this
+                paper, we present ASLR-Guard, a novel mechanism that completely
+                prevents the leaks of code pointers, and render other information
+                leaks (e.g., the ones of data pointers) useless in deriving code
+                address. The main idea behind ASLR-Guard is to render leak of
+                data pointer useless in deriving code address by separating code
+                and data, provide a secure storage for code pointers, and encode
+                the code pointers when they are treated as data. ASLR-Guard can
+                either prevent code pointer leaks or render their leaks harmless.
+                That is, ASLR-Guard makes it impossible to overwrite code
+                pointers with values that point to or will hijack the control
+                flow to a desired address when the code pointers are
+                dereferenced. We have implemented a prototype of ASLR-Guard,
+                including a compilation toolchain and a C/C++ runtime. Our
+                evaluation results show that (1) ASLR-Guard supports normal
+                operations correctly; (2) it completely stops code address leaks
+                and can resist against recent sophisticated attacks; (3) it
+                imposes almost no runtime overhead (< 1\%) for C/C++ programs in
+                the SPEC benchmark. Therefore, ASLR-Guard is very practical and
+                can be applied to secure many applications.},
+    booktitle = {Proceedings of the 22nd ACM SIGSAC Conference on Computer and
+                 Communications Security},
+    pages = {280¿291},
+    numpages = {12},
+    keywords = {randomization, information leak, code reuse attack, ASLR},
+    location = {Denver, Colorado, USA},
+    series = {CCS '15},
+}
+@inproceedings{DYNAMIC_LINKERS_OS,
+    author = {Castes, Charly and Ghosn, Adrien},
+    title = {Dynamic Linkers Are the Narrow Waist of Operating Systems},
+    year = {2023},
+    isbn = {9798400704048},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3623759.3624548},
+    doi = {10.1145/3623759.3624548},
+    abstract = {While software applications, programming languages, and hardware
+                have changed, operating systems have not. Widely-used commodity
+                operating systems are still modelled after the ones designed in
+                the seventies. The accumulated burden of backward compatibility
+                with the large software ecosystems that run our workloads
+                prevents systems from embracing more efficient and disruptive
+                designs explored by the system research community.This paper
+                advocates a fresh approach to operating system research, where
+                innovations are incrementally integrated into operating systems,
+                without disrupting existing software, to gradually reshape our
+                daily-use systems. The dynamic linker emerges as a pivotal
+                element in this transformation process, redefining system
+                behavior. The paper outlines specific use cases, covering
+                performance enhancements, strengthened security measures,
+                streamlined software deployment, and enriched programming
+                language abstractions. Additionally, the paper introduces Spidl,
+                an experimental modular dynamic linker to facilitate the
+                exploration of this promising new research avenue.},
+    booktitle = {Proceedings of the 12th Workshop on Programming Languages and
+                 Operating Systems},
+    pages = {26¿33},
+    numpages = {8},
+    location = {Koblenz, Germany},
+    series = {PLOS '23},
+}
+
+@online{kilroy2022linker,
+    author = {Andrew Kilroy},
+    title = {Re: [PATCH v2 7/8] arm64: mm: Add support for loading kernel at a
+             fixed offset},
+    year = {2022},
+    url = {
+           https://lore.kernel.org/linux-arm-kernel/20220704145333.22557-8-andrew.kilroy@arm.com/T/
+           },
+    note = {Linux ARM Kernel Mailing List},
+    urldate = {2025-04-28},
+}
+
+@inproceedings{gregg2014linux,
+    author = {Brendan Gregg},
+    title = {Linux Performance Analysis: New Tools and Old Secrets},
+    booktitle = {Proceedings of the 28th Large Installation System
+                 Administration Conference (LISA14)},
+    year = {2014},
+    organization = {USENIX Association},
+    address = {Seattle, WA},
+    url = {
+           https://www.usenix.org/sites/default/files/conference/protected-files/lisa14_slides_gregg.pdf
+           },
+    note = {Invited Talk},
+    urldate = {2025-04-28},
+}
+
+@book{love2005linux,
+    author = {Robert Love},
+    title = {Linux Kernel Development},
+    edition = {2},
+    publisher = {Sams Publishing},
+    year = {2005},
+    isbn = {9780672327209},
+    url = {
+           https://litux.nl/mirror/kerneldevelopment/0672327201/ch14lev1sec2.html
+           },
+    note = {Accessed: 2025-04-28},
+}
+
