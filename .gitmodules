@@ -1,0 +1,3 @@
+[submodule "evaluation-artefacts"]
+	path = evaluation-artefacts
+	url = git@github.com:tcassar-diss/evaluation-artefacts.git
