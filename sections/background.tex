@@ -5,7 +5,9 @@ such as process stacks and address spaces, system calls, \ac{bpf}, and software
 compartmentalisation. 
 
 This chapter aims to give the reader the minimum background knowledge needed
-to understand the motivation, design, and implementation of \af. 
+to understand the motivation, design, and implementation of \af. We argue that
+\af is novel and discuss how it  fits into the current research landscape in
+Section~\ref{sec:related-works}.
 
 \subsection{Linux Processes}
 
@@ -32,7 +34,7 @@ memory regions} and are visualised in Figure~\ref{fig:file-backed-vma}.
     \includegraphics[width=0.8 \linewidth]{./diagrams/file-backed-vma.drawio.pdf} 
     \caption{A figure showing a file being loaded into a process's \ac{vma} to
     create a \textit{file backed memory region}. One vertical chunk represents
-one address range represented by a \texttt{vm\_area} struct.}
+one address range represented by a \texttt{vm\_area\_struct} struct.}
     \label{fig:file-backed-vma}
 \end{figure}
 
@@ -47,7 +49,7 @@ inspected from userspace either through the \texttt{pmap} command line tool, or
 by reading the contents of the \texttt{/proc/pid/maps} file (where \texttt{pid}
 is replaced by the relevant process's \ac{pid}.
 
-This is how \af splits up applications for syscall filtering: a system call
+This is how \af splits up applications for system call filtering: a system call
 whitelist per file backed memory region.
 
 \subsubsection{Stack Unwinding}
@@ -63,7 +65,7 @@ while the program is running through a mechanism called \textit{stack
 unwinding} \cite{gregg2014linux, kilroy2022linker}. This involves looking at 
 each frame present in the userspace stack without popping any frames. We
 introduce stack unwinding here as \af relies on stack unwinding for part of
-its design: see Section~\ref{subsubsec:find_syscall}.
+its design: see Section~\ref{subsubsec:find_system call}.
 
 \subsection{Linux Security Mechanisms}
 
@@ -121,7 +123,7 @@ is a well-established idea in systems security. Host-based intrusion detection
 systems such as \cite{10.1145/3214304} use system call invocation patterns to look for
 signs of compromise.
 
-\subsection{System Calls in \ac{os} Security}
+\subsection{System Calls in Existing Security Mechanisms}
 
 Seccomp is a system call filter that has been part of the Linux kernel since
 2005 \cite{arcangeli_seccomp_2005}. Seccomp's goal is to restrict the set of
@@ -149,9 +151,12 @@ system call filtering based on the process's address space, which is what we
 are proposing for this project. It's entry states that seccompBPF programs have
 access to the ``\texttt{instruction\_pointer} \textit{field}'', which
 ``\textit{might be useful in conjunction with the use of /proc/pid/maps to
-perform checks on which region\dots made the system call}''.
+perform checks on which region\dots made the system call}''. As noted in
+\textcite{yang2024makingsyscallprivilegeright}, seccompBPF does not provide
+access to anything other than ptrace registers, which makes it too restrictive
+for \af.
 
-As we argue in Section~\ref{subsubsec:find_syscall}, the instruction pointer
+As we argue in Section~\ref{subsubsec:find_system call}, the instruction pointer
 address alone is insufficient for the fine-grained filtering mechanism we
 propose here. Thus, a novel approach built on different technology is needed
 to implement \af. 
@@ -165,26 +170,30 @@ loaded} into the kernel to alter the kernel's behaviour \cite{LEARNING_EBPF}.
 Writing kernel code without \ac{bpf} is error-prone and typically
 requires linking to the kernel \cite{UNDERSTANDING_LINUX_KERNEL}. In contrast,
 \ac{bpf} programs can be configured to run on many instrumentation points, such
-as a syscall being triggered. \ac{bpf} also provides a \textit{verifier} which ensures the  loaded program is safe \cite{LEARNING_EBPF}.
-This makes it impossible to cause a kernel panic (or any similarly
-catastrophic event) when writing \ac{bpf} although real-world exploits targeting the
-verifier have been seen \cite{BPF_VERIFIER_EXPLOIT}. 
+as a system call being triggered. \ac{bpf} also provides a \textit{verifier} which
+ensures the  loaded program is safe \cite{LEARNING_EBPF}. This makes it
+impossible to cause a kernel panic (or any similarly catastrophic event) when
+writing \ac{bpf} although real-world exploits targeting the verifier have
+been seen \cite{BPF_VERIFIER_EXPLOIT}.  
 
 \subsubsection{Context and Use Cases}
 
 As such, \ac{bpf} is used a lot in industry for observability tooling: being able to
 dynamically load \ac{bpf} programs allows developers to instrument running processes
 without changing any configuration files or using sidecar containers \cite{SIDECAR}.
-\ac{bpf} is also often used in networking and firewalls \cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can
-be loaded onto the \ac{xdp} to inspect packets at the ``\textit{earliest possible
-point in the network driver}'' \cite{CILIUM_BPF_XDP_INTRO}. 
+\ac{bpf} is also often used in networking and firewalls 
+\cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can be loaded 
+onto the \ac{xdp} to inspect packets at the 
+``\textit{earliest possible point in the network driver}'' 
+\cite{CILIUM_BPF_XDP_INTRO}. 
 
 The trade-off here is that \ac{bpf} is extremely limited in expressivity:
 something as mundane as reading every element of an array can be impossible due
 to the verifier needing to ensure that every memory access will not result in 
-a null dereference (even though a loop helper now exists \cite{BPF_LOOP_COMMIT}). Lots of accesses to structs must be done through
-\textit{helper functions} - convenient when they exist, but sometimes mean a
-trivial task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}.
+a null dereference (even though a loop helper now exists 
+\cite{BPF_LOOP_COMMIT}). Lots of accesses to structs must be done through 
+\textit{helper functions} - convenient when they exist, but sometimes mean a trivial
+task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}. 
 
 Despite being originally designed as observability tooling, \ac{bpf} is
 increasingly being used for security applications such as mitigating SPECTRE
@@ -193,7 +202,7 @@ lead to an exploit in kernel \cite{BPF_PACKET_MITIGATION}. Integration with \ac
 {lsm} has been added as part of a suite of security tools for \ac{bpf} 
 \cite{StarovoitovBPFSecurity}, which shows there is precedent for using \ac{bpf}
 as security tooling. Furthermore, seccompBPF is an extension of the existing
-seccomp which can define a custom  syscall filter in terms of a \ac{bpf} program
+seccomp which can define a custom  system call filter in terms of a \ac{bpf} program
 \cite{seccompBPF}.  Knowing this information justifies why developing 
 \af in \ac{bpf} was a sensible idea.
 
