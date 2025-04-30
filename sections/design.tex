@@ -71,14 +71,14 @@ about exactly \textbf{what \af must protect against}.
 \subsection{Requirements} \label{subsec:requirements}
 
 \afg key feature is that it should detect where an application makes a 
-\textbf{disallowed syscall} and intervene accordingly. 
+\textbf{disallowed system call} and intervene accordingly. 
 
 This intervention should be \textbf{user configurable}: warning the user, killing 
 the malicious process, and killing all protected processes should all be
 possible. This gives the user flexibility to choose how to trade-off
 availability and data integrity/confidentiality on a per-application basis.
 
-We should see a \textbf{significant reduction} in the set of syscalls a \ac{ta}
+We should see a \textbf{significant reduction} in the set of system calls a \ac{ta}
 can access after compromising an application, and we want to do this
 \textbf{without detrimentally impacting performance}.\todo{see if these
 requirements can be made more concrete without giving numbers}
@@ -88,7 +88,7 @@ To summarise
 \begin{enumerate}
     \item \af \textit{shall} associate a distinct system call whitelist with each unique file-backed region within a process's \ac{vma}.
     \item \af \textit{shall} \textbf{identify the specific memory region} within the \ac{vma} from which a system call originates. If the invoked system call is not included in the whitelist associated with that originating region, \af \textit{shall} \textbf{trigger an intervention}.
-    \item The intervention action taken by \af upon detecting a non-whitelisted system call \textit{shall} be \textbf{configurable by the user}. The available configuration options \textit{shall} include, at minimum: (a) logging a warning, (b) terminating the process that issued the disallowed syscall, and (c) terminating all processes currently being monitored by \af.
+    \item The intervention action taken by \af upon detecting a non-whitelisted system call \textit{shall} be \textbf{configurable by the user}. The available configuration options \textit{shall} include, at minimum: (a) logging a warning, (b) terminating the process that issued the disallowed system call, and (c) terminating all processes currently being monitored by \af.
     \item \af \textit{shall} demonstrably achieve a \textbf{greater reduction in process privileges} compared to a standard Linux seccomp filter configuration. This security enhancement \textit{shall} be achieved while incurring a runtime performance overhead deemed acceptable within pre-defined limits.
 \end{enumerate}
 
@@ -97,10 +97,10 @@ To summarise
 The primary requirements listed above leave some questions unanswered.
 Developers don't know which system calls their application makes\todo{does this
 need a citation?} - let alone
-which shared libraries are responsible for each syscall. Therefore, we also
+which shared libraries are responsible for each system call. Therefore, we also
 provide \textbf{automated whitelist generation tooling} with \af. 
 
-Syscall filtering literature hasn't defined a standard way to measure the
+system call filtering literature hasn't defined a standard way to measure the
 reduction in privilege that a particular filtering strategy provides. Therefore,
 we look to propose our own metric to quantify the level of privilege reduction
 afforded by \af when compared to seccomp.
@@ -115,7 +115,7 @@ One of these is handling the case where \acg{libc} address space changes during
 execution. This is technically possible, but is rarely seen in production.
 Care needs to be taken to ensure that this assumption doesn't introduce a
 security risk during the implementation. System calls made in the case where 
-\ac{libc} has been changed should be treated as disallowed syscalls.
+\ac{libc} has been changed should be treated as disallowed system calls.
 
 % XXX: this requirement is satisfied by IMPLEMENTATION DETAILS
 %  - libc moved => libc calls will be treated as non-libc
@@ -127,7 +127,7 @@ Figure~\ref{fig:libc-contiguous}. Again, this is
 true (almost) without exception\footnote{Custom patches to the kernel could
 violate this invariant} and reduces the code base size and complexity.
 It is also important to note that this assumption does not introduce a security
-risk due to the way that syscall site identification is implemented and shown in
+risk due to the way that system call site identification is implemented and shown in
 Section \ref{subsubsec:impl-find-site-opt} \cite{glibc-dl-map-segments-h}.
 
 \begin{figure}[ht]
@@ -142,8 +142,8 @@ Section \ref{subsubsec:impl-find-site-opt} \cite{glibc-dl-map-segments-h}.
 
 The limitations of this design are linked to these assumptions. If \acg{libc}
 address is not contiguous, then \af will not be able to find non-\ac{libc}
-addresses correctly. This will result in syscalls being marked as having 
-\ac{libc} as a callsite, which will result in the syscall filter being
+addresses correctly. This will result in system calls being marked as having 
+\ac{libc} as a callsite, which will result in the system call filter being
 tripped as discussed in Section \ref{subsubsec:err-handling}. 
 
 The other obvious limitation of this design is that it only makes sense for
@@ -174,7 +174,7 @@ maps/ringbuffers to communicate with userspace.
 The program is attached to a \textbf{raw tracepoint}, and runs every time
 a system call is made - even ones not called by by the app being filtered.
 
-\subsubsection{Determining Which Syscalls to
+\subsubsection{Determining Which system calls to
 Filter}\label{subsec:design-fork-following}
 
 This means \af needs a way to identify which system calls were made by the
@@ -186,7 +186,7 @@ the system call. Otherwise, we continue with the filtering.
 We also want to apply the filter to any child processes the
 application might create - this is called \textbf{fork following}. The reason for this is two-fold: a common workflow for
 web servers (such as nginx) \cite{apache-prefork-2.4, nginx-inside-performance-scale-2015} is to fork on receiving a request; the second is
-that if a \ac{ta} could just call fork() to remove the syscall filter, our
+that if a \ac{ta} could just call fork() to remove the system call filter, our
 solution would not be secure. Fork following is visualised in
 Figure~\ref{fig:fork-follow-process-tree} with two process trees. With fork
 following, each child process is protected by addrfilter. Without it, children
@@ -203,38 +203,67 @@ are left unprotected.
 
 To do this, we can also check if the parent process's \ac{pid} is in the follow
 map. If it is, we add the calling \ac{pid} to the follow map, and continue with
-the filtering. So, we only ignore syscall if \textbf{neither the current nor
+the filtering. So, we only ignore system call if \textbf{neither the current nor
 parent \ac{pid} exists in the follow map}.
 
-Having decided to filter a syscall, we need to identify where in the process's
-address space the syscall was made. We might use the value of the \ac{pc} when
-the syscall was made, but this turns out to be unhelpful.
+Having decided to filter a system call, we need to identify where in the process's
+address space the system call was made. We might use the value of the \ac{pc} when
+the system call was made, but this turns out to be unhelpful.
 Almost all system calls are made via \ac{libc} in a dynamically linked 
 application, and so the \ac{pc} almost always points to \ac{libc} instead of the
-library that actually made the syscall.
+library that actually made the system call.
 
-\subsubsection{Finding the Syscall Site}\label{subsubsec:find_syscall}
+\subsubsection{Finding the system call Site}\label{subsubsec:find_syscall}
 
 Therefore, \af must find the \textbf{first non-\ac{libc} return pointer in the
-userspace stack}, and treat this address as the true syscall site. In other
+userspace stack}, and treat this address as the true system call site. In other
 words, we trace through the sequence of function calls that led to the system
 calls and find the first call that wasn't made by libc.
 
 For example consider a ``hello, world'' program in C (see Listing~\ref{lst:hello-world}). \texttt{printf()} is a 
-function implemented in \ac{libc} which invokes the \texttt{write()} syscall
+function implemented in \ac{libc} which invokes the \texttt{write()} system call
 behind the scenes, which in turn will call the \texttt{syscall} x86
 instruction\footnote{This is a simplified stack trace: in \texttt{musl},
-\texttt{write()} calls a wrapper function \texttt{syscall\_cp\_c()}. However,
+\texttt{write()} calls a wrapper function \texttt{system call\_cp\_c()}. However,
 the idea still holds.}. This means the userspace stack may look something the stack
 presented in Figure~\ref{fig:hello-world-stack}
 
+\begin{figure}[h]
+    \centering % Center the whole figure environment content
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.4 \linewidth]{./diagrams/hello-world-stack.drawio.pdf} 
-    \caption{An example representation of what a \textit{hello, world}
-    application's user stack may look like.}
-    \label{fig:hello-world-stack}
+    % --- Subfigure for the Diagram (Left) ---
+    \begin{subfigure}[b]{0.48\linewidth} % Adjust width as needed
+        \centering % Center the image within the subfigure
+        % Use the actual path to your diagram PDF
+        \includegraphics[width=\linewidth]{./diagrams/hello-world-stack.drawio.pdf}
+        \caption{High-level \afg core filtering logic.} % Sub-caption for diagram
+        \label{subfig:stack-diagram} % Sub-label for diagram
+    \end{subfigure}
+    \hfill % Add horizontal space between subfigures (pushes them apart)
+    % --- Subfigure for the Code Listing (Right) ---
+    \begin{subfigure}[b]{0.48\linewidth} % Adjust width as needed
+        \centering % Center the code block if needed (often takes container width)
+        % Use minted for the code listing
+        \begin{minted}[fontsize=\small, frame=lines, framesep=2mm, breaklines]{c}
+#include <stdio.h>
+
+int main() {
+
+    // printf @ 0x0000F722AE12
+    printf("Hello, World!\n");    
+
+    return 0;
+}
+        \end{minted}
+        \caption{Hello World example in C.} % Sub-caption for code
+        \label{subfig:hello-world-code} % Sub-label for code
+    \end{subfigure}
+
+    % --- Overall Figure Caption and Label ---
+    \caption{Diagram illustrating an example call stack for a Hello, World
+    program with corresponding code example.}% Overall caption
+    \label{fig:hello-world-stack} % Overall label
+
 \end{figure}
 
 The addresses shown in the diagram are \textbf{return pointers}: these are the
@@ -243,17 +272,16 @@ context, it's helpful to think of return pointers as the \textbf{address of a
 function}. Note also that the top few stack frames all belong to \ac{libc}, with
 the main binary a few frames deeper.
 
-The idea is that here we want to classify this syscall as having been made from
+The idea is that here we want to classify this system call as having been made from
 the \texttt{main} binary, not from \ac{libc}. We can do this by
 \textit{unwinding the stack} until we find a return pointer which isn't within
-\acg{libc} address space. This return pointer is then used as the syscall
+\acg{libc} address space. This return pointer is then used as the system call
 invocation site, as shown in Figure~\ref{fig:stack-unwinding}.
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.8 \linewidth]{./diagrams/stack-unwinding.drawio.pdf} 
-    \caption{A figure showing \textit{why} stack unwinding is needed to find the
-    correct syscall invocation site.}
+    \includegraphics[width=0.95 \linewidth]{./diagrams/stack-unwinding.drawio.pdf} 
+    \caption{A figure showing the stack unwinding process.}
     \label{fig:stack-unwinding}
 \end{figure}
 
@@ -267,12 +295,12 @@ function belongs to.
 Each shared library exists in the \ac{vma} as a \texttt{file backed memory region}.
 In-kernel, the \ac{vma} is implemented as a \texttt{vma\_struct} struct with a
 (indirect) reference to the name of it's backing file. Thus, finding which
-shared library ``owns'' the syscall site is a question of finding the
+shared library ``owns'' the system call site is a question of finding the
 corresponding \texttt{vma\_struct} struct and reading the filename.
 Alternatively, this information can be read from userspace via the
 \texttt{/proc/PID/maps} pseudofile.
 
-\begin{figure}[htbp]
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.8 \linewidth]{./diagrams/core-filter-flowchart.drawio.pdf}
     \caption{A figure showing \afg core filtering logic at a high level.}
@@ -281,17 +309,17 @@ Alternatively, this information can be read from userspace via the
 
 \subsubsection{To Kill or not to Kill?}
 
-Knowing which shared object file made the syscall allows us to find the correct
-syscall whitelist and intervene if need be.
+Knowing which shared object file made the system call allows us to find the correct
+system call whitelist and intervene if need be.
 
 To do this, we keep a mapping from shared library filename to a set of allowed
 system calls. We use the previously calculated filename as a key to this map to
-retrieve some (pre-configured) whitelists. If the syscall number is in the
+retrieve some (pre-configured) whitelists. If the system call number is in the
 whitelist, no action is taken and the \ac{bpf} tracepoint returns with code 0.
 
-If the syscall isn't on the whitelist, \af will intervene. The intervention
+If the system call isn't on the whitelist, \af will intervene. The intervention
 policy is user-configurable and has to be read from a config map. Userspace is
-informed that a syscall has tripped the filter as the offending \ac{pid} is
+informed that a system call has tripped the filter as the offending \ac{pid} is
 written to a ringbuffer. If the policy is set to kill the process (or all 
 processes in the \ac{pid} filtering map), \af sends a kill signal to the 
 offending \ac{pid}. 
@@ -307,7 +335,7 @@ Figure~\ref{fig:core-filter-flowchart}.
 This design is minimal, modular, and easy to reason about. It can be achieved
 with a single \ac{bpf} program running on the \texttt{raw\_tp/sys\_enter}
 tracepoint with two core maps: one for storing the \acp{pid} of filtered apps
-and the other for mapping shared library names to syscall whitelists.
+and the other for mapping shared library names to system call whitelists.
 
 What's been laid out here is the interesting part of the application
 - the core filtering logic. The frontend is much larger (in terms of LoC) than
@@ -318,9 +346,9 @@ work.
 
 The frontend is responsible for parsing the \af whitelists and loading them into
 the whitelist map. We looked to build on existing standards for defining
-syscall whitelists but found none suitable for our use case. Seccomp filters,
+system call whitelists but found none suitable for our use case. Seccomp filters,
 for example, are defined as a \iac{bpf} program - this isn't user friendly and
-doesn't allow for mapping shared libraries to syscall filters. Therefore, we defined our
+doesn't allow for mapping shared libraries to system call filters. Therefore, we defined our
 own standard: a very simple TOML file. An example is provided in
 Listing~\ref{lst:toml-whitelist}.
 
@@ -342,25 +370,25 @@ therefore, we chose a different method of validation and evaluation.
 \todo{make this more brief and move some detail to evaluation}
 
 Validation of \af happens in two phases: first, we make sure that the \ac{bpf}
-program we've written is not interfering with normal syscall functionality. Then,
+program we've written is not interfering with normal system call functionality. Then,
 we test that our filtering system works - that is, \af intervenes if and only if
-a syscall that is not on the whitelist is made.
+a system call that is not on the whitelist is made.
 
-To make sure that \af does not interfere with normal syscall functioning, we
-propose to use the \acg{ltp} syscall test suite. We will run the suite on our
+To make sure that \af does not interfere with normal system call functioning, we
+propose to use the \acg{ltp} system call test suite. We will run the suite on our
 test bench with and without \af enabled and make sure that the results are the
 same.
 
 Due to the problems with mocking and automating testing (expanded on in Section
 \ref{sec:evaluation}), we will favour a manual approach to ensuring that the 
-syscall filtering works as expected. Writing a comprehensive test harness in requires 
+system call filtering works as expected. Writing a comprehensive test harness in requires 
 significant engineering effort: likely more than developing the solution. 
 
 Therefore, we will opt for validation via manual
 verification. During development, we will write a set of programs with a stack 
 that is easy to inspect with tools like \texttt{gdb}. We will use a small set of
-syscalls and dynamically generate whitelists (as discussed in
-\ref{subsubsec:additional-tooling}). Using a restricted set of syscalls allows
+system calls and dynamically generate whitelists (as discussed in
+\ref{subsubsec:additional-tooling}). Using a restricted set of system calls allows
 us to manually add and remove them from the whitelists and observe program
 behaviour.
 
@@ -371,8 +399,8 @@ application. To do this, we define a \textit{privilege metric} (Equation~\ref
 are vs \afss-filtered applications.
 
 We then look to evaluate how costly \af is at runtime. To do this, we will take
-a broad array of benchmarks informed by modern syscall filtering literature and
-run them with \af enabled. We will also run the same set of syscalls with a
+a broad array of benchmarks informed by modern system call filtering literature and
+run them with \af enabled. We will also run the same set of system calls with a
 seccomp filter and with no filter, enabling comparison with a state of the art
 filtering system and with a baseline.
 
@@ -381,7 +409,7 @@ overhead. Therefore, we will use our preliminary findings to stress \af and
 speculate about application characteristics which most impact performance.
 
 To do this evaluation, we need additional tooling. As discussed, we need two
-way to generate per-library syscall whitelists. We also need some way to turn
+way to generate per-library system call whitelists. We also need some way to turn
 these whitelists into a simple seccomp filter, as well as a tool to compute the
 privilege reduction seen by using \af over seccomp. The design of these tools are
 briefly discussed in Section \ref{subsubsec:additional-tooling}.
@@ -397,19 +425,19 @@ primarily to aid development and evaluation, but more work is needed to create a
 production-ready generator based on static analysis.
 
 We implement the whitelist generator using a lot of the same functionalities of
-\af. The key difference is that after identifying the syscall site, we write a
-syscall number to the syscall site's map (recall that at this stage \af would
-check to see if the syscall number was in the site's map and intervene if need
+\af. The key difference is that after identifying the system call site, we write a
+system call number to the syscall site's map (recall that at this stage \af would
+check to see if the system call number was in the site's map and intervene if need
 be). When the program finishes executing (or on Ctrl-C), the frontend reads the
 contents of the bpf whitelist map and marshals the results to a TOML file.
 The pseudocode is provided in Listing~\ref{lst:generator-pseudocode} and shows
 that the generation code makes heavy use of \afg functionality.
 
 We also need a tool that can launch an application with a seccomp filter enabled.
-The tool takes as arguments an \af syscall whitelist
+The tool takes as arguments an \af system call whitelist
 and a path to an executable, parses the whitelist and generates a single
 seccomp filter. This filter is made by taking the union of each shared 
-library's allowed set of syscalls present in the \af whitelist. The filter can
+library's allowed set of system calls present in the \af whitelist. The filter can
 then be applied to a benchmark to provide comparison data. This tool will be
 referred to as \texttt{af-seccomp}.
 
@@ -417,7 +445,7 @@ The final additional tool we need is an evaluation tool, \texttt{syso}.
 \texttt{syso} takes in a binary as input and prints a comparison of the 
 binary's privilege levels  when \af and seccomp are applied. It also saves
 some raw data to disc for further post processing: a JSON mapping from
-syscall numbers to number of times executed, broken down by library. An
+system call numbers to number of times executed, broken down by library. An
 example of this is available in Listing~\ref{lst:syso-data-dump}.
 
 This section looked to motivate the minimalist design philosophy, threat model,

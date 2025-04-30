@@ -5,6 +5,8 @@
 *.drawio  # raw drawio files 
 *.bkp
 *.dtmp
+*.svg
+*.png
 
 # Provided by 
 #    https://github.com/github/gitignore/blob/main/TeX.gitignore

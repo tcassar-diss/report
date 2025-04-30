@@ -7,8 +7,8 @@ We quantify the additional runtime cost that developers can expect from using
 
 We start by sharing our test environment and the version of \af we used to
 aid reproducibility. We then move on to showing that \af is correct: that
-is, it correctly identifies which shared library made which syscall without
-affecting normal syscall function. Having shown correctness, we move on to
+is, it correctly identifies which shared library made which system call without
+affecting normal system call function. Having shown correctness, we move on to
 security evaluation, where we define a privilege reduction metric and apply the
 metric to a set of application benchmarks. We finish with performance analysis,
 where we compare the runtime cost of \af to that of using a seccomp filter.
@@ -42,7 +42,7 @@ GitHub at
 \href{https://github.com/tcassar-diss/addrfilter/tree/2bd209c630df3509d4ac721d018dabab94305dde}
 {\texttt{2db209c}}).
 
-\begin{table}[htbp] % Position specifier (here, top, bottom, page)
+\begin{table}[h] % Position specifier (here, top, bottom, page)
     \centering % Center the table
     \caption{Test Environment Configuration Summary}
     \label{tab:test_environment}
@@ -50,7 +50,8 @@ GitHub at
         \toprule
         Component           & Specification \\
         \midrule
-        \multicolumn{2}{@{}l}{\textbf{System Hardware \& OS}} \\ % Optional subheading within table
+        \multicolumn{2}{@{}l}{\textbf{System Hardware \& OS}} \\ 
+        \aclp{cpu}           & 2x Intel Xeon Gold 5220R \\
         Operating System    & Ubuntu 24.04.2 \\
         Kernel              & Linux 6.8.52-generic \\
         Logical Cores       & 96 (2 sockets x 24 cores/socket x 2 threads/core) \\
@@ -58,21 +59,17 @@ GitHub at
         Storage             & 2 TB (Buffered Read: \textasciitilde{}515 MB/s via \texttt{hdparm}) \\
         Kernel Security     & Standard defaults enabled (ASLR, Stack Canaries, etc.) \\
         \midrule
-        \multicolumn{2}{@{}l}{\textbf{Software \& Build Environment}} \\ % Optional subheading
+        \multicolumn{2}{@{}l}{\textbf{Software \& Build Environment}} \\ 
         Software Under Test & \texttt{addrfilter} v1.0.0 (Commit: \texttt{2db209c}) \\
         Go Compiler         & Version 1.23.2 \\
         eBPF Toolchain      & Cilium ebpf-go v0.17.1 \\
         LLVM Backend (for eBPF) & Clang version 18.1.3 \\
         \midrule
-        \multicolumn{2}{@{}l}{\textbf{Benchmarking Configuration}} \\ % Optional subheading
+        \multicolumn{2}{@{}l}{\textbf{Benchmarking Configuration}} \\ 
         Network Tests       & Client and Server processes co-located on host \\
         Application Privileges & Filtered applications run as non-root \\
         \bottomrule
     \end{tabular}
-    % Optional: Add a small note below if needed, e.g.:
-    % \captionsetup{font=small} % Requires caption package loaded like above
-    % \vspace{1mm} % Adjust space as needed
-    % \parbox{\linewidth}{\footnotesize Note: Specific CPU model (Intel Xeon Gold 5220R) and further hardware details are in Section 4.1.}
 \end{table}
 
 Key aspects of the test hardware and software are summarised in
@@ -94,11 +91,11 @@ benchmark suite comprising five distinct applications and workloads,
 aiming to cover common server application paradigms. The version of each
 benchmark/application can be found in 
 Table~\ref{tab:benchmark_software_versions}. Collectively, these benchmarks were
-selected to stress \af across a wide syscall profile: network-dominated 
+selected to stress \af across a wide system call profile: network-dominated 
 (Redis, Nginx), \ac{io}-intensive (\texttt{fio}), \ac{cpu}-intensive 
 (\ac{npb}), and complex, mixed workloads (PostgreSQL).
 
-\begin{table}[htbp] 
+\begin{table}[h] 
     \centering 
     \caption{Benchmark Suite Software Components and Versions}
     \label{tab:benchmark_software_versions}
@@ -120,17 +117,17 @@ selected to stress \af across a wide syscall profile: network-dominated
 \subsubsection{Redis and \texttt{redis-benchmark}}\label{subsubsec:redis-just}
 
 Redis is an in-memory key/value store, representing network-bound applications 
-sensitive to latency. Its workload primarily stresses network stack syscalls 
+sensitive to latency. Its workload primarily stresses network stack system calls 
 (\texttt{accept()}, \texttt{read()}, \texttt{write()}, \texttt{epoll\_wait}, 
 etc.) and memory management, allowing us to  measure  \af's impact on high 
 throughput, low latency network services. We used small key sizes (3B) to 
-maximise the syscall rate relative to data transfer, which will stress \af as 
+maximise the system call rate relative to data transfer, which will stress \af as 
 much as possible.
 
 During benchmarking, Redis was run with default configuration settings to
 reflect a standard, no-tuning deployment. \texttt{redis-benchmark} was also run
 with default settings: its small key size of 3 bytes makes the benchmark more
-syscall intensive, which has the effect of stressing \af as more syscalls are
+system call intensive, which has the effect of stressing \af as more syscalls are
 made per second with small key sizes. We specified the number of clients that
 \texttt{redis-benchmark} was to simulate with \texttt{-c 48} flag. This used
 half the available cores on our server and was done to add a moderate amount of
@@ -142,7 +139,7 @@ real-world conditions.
 Nginx is a widely used high-performance web server, representative of applications
 which deal with massively concurrent network connections and potentially
 significant file \ac{io} (e.g., serving static assets). This benchmark exercises
-network syscalls, file system syscalls (open, read, sendfile),
+network system calls, file system syscalls (open, read, sendfile),
 and process/thread management, testing \af's overhead under high concurrency
 and mixed \ac{io} patterns.
 
@@ -151,7 +148,7 @@ default configuration. The \texttt{nginx.conf} we used is available in
 Listing~\ref{lst:nginx-conf} (in Appendix~\ref{subsec:nginx}). Some key 
 decisions were to set \texttt{worker\_processes} to auto to use available cores 
 efficiently, and to enable \textit{sendfile} to let Nginx use the optimised 
-\texttt{sendfile()} syscall to serve our single-page static site (see 
+\texttt{sendfile()} system call to serve our single-page static site (see 
 Listing~\ref{lst:index-html}).
 
 We disabled access logging to remove noise from disk \ac{io} to avoid stressing
@@ -165,7 +162,7 @@ connection and process/thread management subsystems.
 \texttt{fio}  is a flexible \ac{io} workload generator used here to estimate
 the impact of \af on the storage subsystem. By configuring \texttt{fio} for
 specific \ac{io} pattern, we can observe the runtime cost incurred by \af on
-filesystem and block device related syscalls. We carefully configured
+filesystem and block device related system calls. We carefully configured
 \texttt{fio} to focus specifically on high throughput sequential write
 performance, as data ingestion/writing large files to disk are often 
 predominantly sequential write tasks.
@@ -177,7 +174,7 @@ We used \texttt{fio} to write 10GB files per job (--size=10G) across 16 parallel
 (--runtime=5m) after a 2-second ramp-up (--ramp\_time=2s) to ensure stable 
 measurements. We enabled Direct \ac{io} (--direct=1) to bypass the
 operating system's page cache. This ensures that write operations translate 
-directly into \texttt{write()} syscalls, making the benchmark highly sensitive 
+directly into \texttt{write()} system calls, making the benchmark highly sensitive 
 to any overhead introduced by \af. A large block size of 1MB (--bs=1M) was 
 used as it is characteristic of sequential throughput workloads. To maximize 
 load and attempt to saturate the storage device, a high \ac{io} queue depth of 64
@@ -193,18 +190,27 @@ used here to represent a database workload. \texttt{pgbench} simulates
 transactional workloads involving client connections (stressing the network
 stack), query processing (\ac{cpu}/memory intense), and write-ahead logging
 (sequential, synchronous disk \ac{io} via \texttt{write()} and \texttt{fsync()}
-syscalls). PostgreSQL's complexity and diversity lets us evaluate \af's
-performance on a broad set of syscalls.
+system calls). PostgreSQL's complexity and diversity lets us evaluate \af's
+performance on a broad set of system calls.x` `
 
-\todo{paragraph on options}
+To exercise PostgreSQL, we used its standard benchmarking tool, 
+\texttt{pgbench}. The Postgres server was started manually (i.e. not via
+\texttt{systemd}) with default configuration. For load generation, we configured 
+\texttt{pgbench} to simulate 48 concurrent clients (\texttt{-c 48}), each
+corresponding to a worker thread (\texttt{-j 48}, matching \texttt{-c}).
+This uses half the available logical cores (96) on our
+test server, chosen to impose a significant transactional load (similar to
+the rationale for Redis) without the risk of stressing system resources like the
+\ac{cpu} scheduler. As with Nginx, each test was run for a duration of 30
+seconds (\texttt{-T 30}). Each run was repeated three times.
 
 \subsubsection{The \ac{npb} Suite}\label{subsubsec:npb-just}
 
 The \acl{npb} suite of benchmarks is a set of computationally intensive 
 benchmarks derived from computational fluid dynamics applications. This 
-workload is inherently \ac{cpu}-bound, with fewer \ac{io} or network syscalls
+workload is inherently \ac{cpu}-bound, with fewer \ac{io} or network system calls
 compared to the other selected benchmarks. This allows us to measure the
-overhead on \af on compute-heavy processes, where syscalls will primarily relate
+overhead on \af on compute-heavy processes, where system calls will primarily relate
 to thread management (e.g. \texttt{futex()}) and memory management (e.g. 
 \texttt{mmap()}).
 
@@ -227,36 +233,36 @@ suite did not take more than three minutes.
 To validate that \af works correctly, we used a combination of strategies. We 
 extensively used manual testing on simple \textit{"Hello, World"} style 
 applications during development to ensure that the filtered application was 
-killed when it made a non-whitelisted syscall. We then wrote a collection of 
+killed when it made a non-whitelisted system call. We then wrote a collection of 
 shared libraries (Listings \ref{lst:getpid-c},~\ref{lst:printf-c}) containing 
 functions that wrapped \ac{libc} function, and rewrote our 
 \textit{"Hello, World"} style application (provided in Appendix~\ref{sec:linkage})
-to use them. This example lets us easily reason about where we expect syscalls
-to come from. We expect the \texttt{write()} syscall (number 1) to come from 
+to use them. This example lets us easily reason about where we expect system calls
+to come from. We expect the \texttt{write()} system call (number 1) to come from 
 the \texttt{printf.so} and the \texttt{getpid()} (number 39) to come from 
 \texttt{getpid.so}. We generated a whitelist with \af \texttt{generate} 
-(Listing~\ref{lst:whitelist-toml}) and saw syscalls 1 and 39 originating from
+(Listing~\ref{lst:whitelist-toml}) and saw system calls 1 and 39 originating from
 their expected shared library files.
 
-When we manually removed a syscall from the shared library's whitelist, we 
+When we manually removed a system call from the shared library's whitelist, we 
 observed that the process was killed. This  verified that \af works correctly
 on small examples.
 
-Having shown that \af was able to detect and kill processes making syscalls not
-on their whitelists, we then ensured that syscall behaviour had not been 
-adversely affected by \af. To do this, we turned to the \acg{ltp} syscall test 
+Having shown that \af was able to detect and kill processes making system calls not
+on their whitelists, we then ensured that system call behaviour had not been 
+adversely affected by \af. To do this, we turned to the \acg{ltp} system call test 
 suite \cite{LINUX_TEST_PROJECT}. \ac{ltp} was installed according to the
 \href{https://linux-test-project.readthedocs.io/en/latest/users/quick_start.html}{documentation}.
 
-We ran the syscall test suite using the command \texttt{/opt/ltp/kirk -f ltp -r
-syscalls} with no filtering enabled for some baseline results. We then ran
-\texttt{addrfilter generate /opt/ltp/kirk}\dots to generate the relevant
+We ran the system call test suite using the command \texttt{/opt/ltp/kirk -f ltp -r
+system calls} with no filtering enabled for some baseline results. We then ran
+\texttt{afgen /opt/ltp/kirk}\dots to generate the relevant
 whitelists. We supplied this whitelist as an argument to addrfilter, and ran
 \texttt{addrfilter ./whitelist.json /opt/ltp/kirk}\dots to run the test suite
 with addrfilter enabled. We observed differences in test failures with \af
 enabled versus disabled, displayed in Table~\ref{tab:af_failures}.
 
-\begin{table}[htbp]
+\begin{table}[h]
 \centering
 \caption{\ac{ltp} test failures with \af disabled and enabled.}
 \label{tab:af_failures}
@@ -293,15 +299,15 @@ cause of the breakage.
 
 %TODO: cite https://man7.org/linux/man-pages/man2/process_vm_readv.2.html
 % TODO: cite https://man7.org/linux/man-pages/man2/perf_event_open.2.html
-The \texttt{process\_vm\_readv()} and \texttt{process\_vm\_writev()} syscalls 
+The \texttt{process\_vm\_readv()} and \texttt{process\_vm\_writev()} system calls 
 allow for a form of \ac{ipc} which bypass kernelspace, so it is not immediately 
-obvious why these tests fail. The same goes for the \texttt{semctl()} syscall
+obvious why these tests fail. The same goes for the \texttt{semctl()} system call
 which is used to control semaphores and the \texttt{perf\_event\_open()}
-syscall, used to set up performance monitoring: \af's design does not provide any
-clues as to why these syscalls tests fail.
+system call, used to set up performance monitoring: \af's design does not provide any
+clues as to why these system calls tests fail.
 
 The most puzzling of all are the failures in tests relying on the 
-\texttt{open()} and \texttt{openat()} syscalls. Both involve file creation -
+\texttt{open()} and \texttt{openat()} system calls. Both involve file creation -
 throughout the development and evaluation process, filtered applications have
 exhibited no issues with file interaction. It is possible that altering the
 \ac{uid}/\ac{gid} of the filtered application may create a file associated with
@@ -316,11 +322,12 @@ where we quantify the degree of privilege reduction provided by \af.
 
 To evaluate the privilege reduction afforded by using \af over seccomp, we
 define a \textit{privilege metric} (Equation~\ref{eqn:privilege}), which is
-a function of the set of syscalls a compartment in an application can make.
+a function of the set of system calls a compartment in an application can make.
 
 Recall that \af provides fine-grained filtering based on file-backed
 regions (shared libraries) within the process's \ac{vma}. \af associates a 
-syscall whitelist with each of these regions. For the purpose of this
+system call whitelist with each of these regions in accordance with our threat
+model presented in Section~\ref{subsec:threat-model}. For the purpose of this
 evaluation, we will refer to these regions as compartments. We chose to
 define our metric in terms of these compartments, as this aligns with how \af
 views the world. To calculate the privilege of a seccomp-filtered application,
@@ -339,35 +346,34 @@ To quantify privilege reduction, we first reason about what the
 \textit{privilege} of an application intuitively means and then look to ground
 the notion mathematically.
 
-We posit that the privilege of a component (in the context of syscall
-filtering) quantifies the potential harm it could cause via the syscalls
+We posit that the privilege of a component (in the context of system call
+filtering) quantifies the potential harm it could cause via the system calls
 it is permitted to execute. We considered whether the number of unique
-syscalls an application can make would be a sensible metric for privilege
+system calls an application can make would be a sensible metric for privilege
 but decided that this was imprecise. The reason why is
 demonstrated by the following example:  
 
 Consider two compartments which allow an attacker access to
-exactly one syscall: attacker \textit{A} has access to the 
-\texttt{getpid()} syscall and attacker \textit{B} has access to the
-\texttt{execve()} syscall. Both have access to exactly one syscall, but
+exactly one system call: attacker \textit{A} has access to the 
+\texttt{getpid()} system call and attacker \textit{B} has access to the
+\texttt{execve()} system call. Both have access to exactly one syscall, but
 \texttt{execve()} is significantly more powerful than \texttt{getpid()}.
-If we defined privilege as the number of unique syscalls, then each compartment
+If we defined privilege as the number of unique system calls, then each compartment
 would have the same privilege level. Intuitively, this is not sensible, so we
-defined our metric to factor in how ``powerful'' a syscall is. 
+defined our metric to factor in how ``powerful'' a system call is. 
 
-% TODO: cite syscall privilege levels  
-To do this, we turned to existing syscall literature to rank
-how ``powerful'', or ``dangerous'' a given syscall is. \todo{in-text citation
-for syscall lit.} classified syscalls into three different danger levels, which
-we integrated into our analysis. In our metric, each type of syscall receives a
-\textit{danger score} - $1$, $2$, or $3$ - according to the privilege level of the
-syscall as reported by \todo{cite}.
+To do this, we turned to existing system call literature to rank
+how ``powerful'', or ``dangerous'' a given system call is. 
+\textcite{SYSCALL_RANKINGS} classified syscalls into three different danger
+levels, which we integrated into our analysis. In our metric, each type of
+system call receives a \textit{danger score} - $1$, $2$, or $3$ - according
+to the privilege level of the system call.
 
 We define the overall privilege score for a specific compartment, denoted as
-$C$, by summing the individual danger scores of all syscalls utilised
-within that compartment. Let $S_C$ be the set of unique syscalls present
+$C$, by summing the individual danger scores of all system calls utilised
+within that compartment. Let $S_C$ be the set of unique system calls present
 in compartment $C$, and let $\mathrm{Score}(s)$ represent the danger score
-assigned to a specific syscall $s \in S_C$. The Compartment Privilege, $P_C
+assigned to a specific system call $s \in S_C$. The Compartment Privilege, $P_C
 $, is then calculated as follows:  
 
 \begin{equation} \label{eqn:privilege} 
@@ -377,10 +383,10 @@ $, is then calculated as follows:
 Here:
 \begin{itemize}
     \item $P_C$ represents the total privilege score for compartment $C$.
-    \item $S_C$ is the set of syscalls invoked by compartment $C$.
-    \item $s$ is an individual syscall from the set $S_C$.
+    \item $S_C$ is the set of system calls invoked by compartment $C$.
+    \item $s$ is an individual system call from the set $S_C$.
     \item $\mathrm{Score}(s)$ is the pre-defined danger score ($1, 2,$ or $3$)
-        associated with syscall $s$.
+        associated with system call $s$.
 \end{itemize}
 
 Note that the concept of privilege is defined on compartments, not applications.
@@ -425,11 +431,11 @@ $P_{A, \text{seccomp}}$ be the score when filtered with seccomp (the ``
 seccomp score''). 
 
 It is worth noting that $P_{A, \text{seccomp}} \ge P_{A, \af}$. This
-relationship holds because the set of syscalls permitted by the \af 
+relationship holds because the set of system calls permitted by the \af 
 configuration for an application is, by construction, a subset of the system
 calls permitted by the corresponding seccomp configuration in our setup.
-Therefore, the syscalls in the most permissive \af compartment will always
-be a subset of the seccomp syscalls, and therefore \af can only ever be as at
+Therefore, the system calls in the most permissive \af compartment will always
+be a subset of the seccomp system calls, and therefore \af can only ever be as at
 most as privileged as seccomp.
 
 \subsubsection{Privilege Reduction in Benchmarks}
@@ -445,42 +451,135 @@ Equation~\ref{eqn:privilege-reduction}.
 \end{equation}
 
 We implemented an evaluation tool, \texttt{syso}, to calculate these privilege
-reduction metrics. \texttt{syso} identifies which compartments are making different
-syscalls (in a similar way to \af \texttt{generate}), and uses the predefined
-syscall set to calculate a score for each compartment. It then takes the union
-of each compartment syscall list, and calculates the privilege of that to
+reduction metrics. \texttt{syso} identifies which compartments are making
+different system calls (in a similar way to \texttt{afgen}), and uses the
+predefined system call set to calculate a score for each compartment, as
+discussed in \ref{subsubsec:syso-impl}. It then takes the union of each
+compartment system call list, and calculates the privilege of that to
 estimate the privilege of a seccomp filter.
 
-The privilege reduction results are tabulated in Table~\todo{tabluate reduction}
-and visualised in Figure~\todo{visualise reduction}. Since \texttt{syso} is also
-a dynamic analysis based tool, we ran each benchmark three times with
-\texttt{syso} enabled and unioned the set of syscalls attributed to each
-compartment across all three runs. This increased our confidence that we were
-gathering a representative sample of syscalls without needing to invest
-significant engineering effort in a static-analysis based tool.
+\subsubsection{Results}
+
+The privilege reduction results are tabulated in Table~\ref{tab:pr-results}.
+Since \texttt{syso} is also a dynamic analysis based tool, we ran each
+benchmark three times with \texttt{syso} enabled and unioned the set of
+system calls attributed to each compartment across all three runs. This
+increased our confidence that we were gathering a representative sample of
+system calls without needing to invest significant engineering effort in a static
+-analysis based tool. 
 
 Running these tests generated lots of files and artefacts, which have all been
 made publicly available in the GitHub repository linked in 
-Appendix~\ref{apx:eval-artefacts}. We include the per-compartment syscall counts 
+Appendix~\ref{apx:eval-artefacts}. We include the per-compartment system call counts 
 (after a union was taken) that \texttt{syso} reported for each benchmark in
 our evaluation artefacts repository (see Appendix~\ref{apx:eval-artefacts}).
+We also provide the scripts we used to generate all plots and summary documents
+within the repository.
 
-\subsubsection{Analysis of Results}
+\begin{table}[h] 
+  \centering
+  % Replaced \af with AF for robustness, assuming it's not a defined command
+  \caption{Privilege reduction when using \af over seccomp for each benchmark}
+  \label{tab:pr-results}
+  % Updated column definitions: l (left), S (integer), S (integer), S (decimal)
+  \begin{tabular}{l S[table-format=3.0] S[table-format=2.0] S[table-format=2.2]}
+    \toprule
+    % Updated header text and column alignment
+    Benchmark & {Raw Seccomp Score} & {Raw \af Score} & {Percentage-PR (\%)} \\
+    \midrule
+    % Populated with corrected data
+    Redis        & 119 & 53 & 55.46 \\
+    Nginx        & 78  & 59 & 24.35 \\ % Used scores from 24.36% snippet
+    \texttt{fio} & 45  & 20 & 55.56 \\ % Corrected PR from 55.46% based on snippets
+    Postgres     & 93  & 71 & 23.66 \\
+    NPB          & 38  & 18 & 52.63* \\ % Median scores used
+    \bottomrule
+  \end{tabular}
+  \par\medskip\footnotesize
+  % Corrected Min/Max in footnote
+  *Median of 9 results; Min 42.11, Max 55.26
+\end{table}
 
-% \af is effective in reducing the privilege
+This set of results shows that filtering an application with \af significantly
+reduces the privilege of an attacker who has compromised an application. With
+\af enabled, the attacker has access to a significantly smaller set of
+``dangerous'' system calls when compared to seccomp. Three out of our five
+benchmarked applications (or 12 out of 15 benchmarked binaries) exhibit
+privilege reductions of over 50\%. \af, when used as a filtering solution,
+creates a significantly more secure environment for the applications it
+protects.
+
+We mention that 15 test binaries were run: this is because the \ac{npb} suite is
+made of 9 individual binaries, therefore giving 9 different privilege reduction
+scores. We opted to report the median result in Table~\ref{tab:pr-results}, but
+include the percentage reductions in Table~\ref{tab:npb_individual_sorted} for 
+completeness.
+
+\begin{table}[ht]
+  \centering
+  \caption{Individual \ac{npb} Benchmark Privilege Reduction Results}
+  \label{tab:npb_individual_sorted}
+  % Using 'l' for benchmark name and 'S' for percentage alignment
+  \begin{tabular}{l S[table-format=2.2]}
+    \toprule
+    Benchmark & {Privilege Reduction (\%)} \\ % {} protects header from siunitx
+    \midrule
+    is.C.x    & 55.26 \\ 
+    ft.C.x    & 52.63 \\
+    cg.C.x    & 52.63 \\
+    ep.C.x    & 52.63 \\
+    mg.C.x    & 52.63 \\
+    bt.C.x    & 52.63 \\
+    sp.C.x    & 52.63 \\
+    lu.C.x    & 50.00 \\
+    ua.C.x    & 42.11 \\ 
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Interestingly, Nginx and Postgres see more modest (but still significant) levels
+of privilege reduction when compared to the other benchmarks in our suite. We
+investigated to see if the number of shared libraries in a binary had an impact
+on the privilege reduction level, however we found no correlation. The Postgres
+binary has 42 shared libraries (measured with \texttt{ldd}) and Nginx has 8; 
+both exhibit similar privilege reduction levels ($\sim$ 24\%). Redis, which
+shows 55\% privilege reduction has 18 shared libaries. 
+
+A more likely reason for this could be to do with the distribution of system
+calls within a binary. Applications showing higher privilege reduction scores
+will likely have a more even distribution of system calls across their shared
+libraries, whereas applications showing more modest reductions may have
+``dangerous'' functionality concentrated into few shared libraries.
+
+Verifying this would be possible, but would require static analysis and
+therefore significant engineering work. We acknowledge that the use of dynamic
+analysis to estimate privilege reduction is an inherent limitation of this
+evaluation, but we do not believe it invalidates our results. Our use of
+multiple analysis runs, as well as the high privilege reduction scores seen,
+indicate that \af is more secure than seccomp. 
 
 \subsection{Performance Evaluation}\label{subsec:perf-eval}
 
 Having shown that \af effectively reduces the privilege of the applications that
 it protects, we turn our attention to quantifying the runtime cost that \af
-incurs. To do these, we ran our suite of benchmarks under the same conditions as
-we did for our security analysis (Section~\ref{subsec:security-eval}), defined
-in Section~\ref{subsec:benchmark-selection}.
+incurs. To do these, we ran our suite of benchmarks under the same
+conditions as in Section~\ref{subsec:benchmark-selection}, but this time we
+recorded the benchmark results. 
 
-We repeated each benchmark three times each - all raw data, logs and
-generated outputs are available at the repository linked in
-Appendix~\ref{apx:eval-artefacts}. Each benchmark was run with no filtering
-enabled, and then with \af and seccomp enabled. Like this, we are able to
-provide an absolute slowdown in the performance of each application, and a
-relative slowdown when compared to seccomp (the state of the art).
+We conducted three experiments with each benchmark: in one experiment, no
+application had a system call filter attached. One experiment was conducted with
+a seccomp filter attached and, finally, we attached \af for our final
+experiment. Like this, we are able to show the absolute slowdown that \af
+incurs by comparing with an unfiltered system, but also how \af compares to
+industry-standard filtering tooling.
+
+Each experiment was repeated three times and, as was the case for our Security
+Analysis, all raw data, analysis scripts, and plots are available at the
+repository linked in Appendix~\ref{apx:eval-artefacts}.
+
+Each benchmark that we used is comprised of a set of microbenchmarks. In
+\textcite{HeiserBenchmarkingCrimes}, Heiser, a respected researcher in the
+\acp{os} community, argues that there is no good reason to report an arbitrary
+subset of benchmark results. He goes further, and argues that this is not good
+academic practice and mentions that he often rejects papers
 

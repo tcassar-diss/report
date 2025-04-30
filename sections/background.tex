@@ -1,4 +1,4 @@
-\section{Background} \label{sec:background}
+\section{Background}\label{sec:background}
 
 \af is a project built on a complex stack of systems concepts and technologies
 such as process stacks and address spaces, system calls, \ac{bpf}, and software
@@ -65,7 +65,7 @@ while the program is running through a mechanism called \textit{stack
 unwinding} \cite{gregg2014linux, kilroy2022linker}. This involves looking at 
 each frame present in the userspace stack without popping any frames. We
 introduce stack unwinding here as \af relies on stack unwinding for part of
-its design: see Section~\ref{subsubsec:find_system call}.
+its design: see Section~\ref{subsubsec:find_syscall}.
 
 \subsection{Linux Security Mechanisms}
 
@@ -156,7 +156,7 @@ perform checks on which region\dots made the system call}''. As noted in
 access to anything other than ptrace registers, which makes it too restrictive
 for \af.
 
-As we argue in Section~\ref{subsubsec:find_system call}, the instruction pointer
+As we argue in Section~\ref{subsubsec:find_syscall}, the instruction pointer
 address alone is insufficient for the fine-grained filtering mechanism we
 propose here. Thus, a novel approach built on different technology is needed
 to implement \af. 
@@ -223,9 +223,9 @@ also discuss which maps are used and where/why we use ringbuffers.
 
 \subsection{Software Compartmentalisation}
 
-The core idea of \af – decomposing the process address space to apply 
-fine-grained system call restrictions – is an application of \textit{software
-compartmentalisation}. 
+The core idea of \af{}- decomposing the process address space to apply 
+fine-grained system call restrictions - is an application of \textit{software
+compartmentalisation}.
 
 Software compartmentalisation is a form of defensive programming where an application
 is broken down into multiple isolated compartments \cite{SOK}. Compartments

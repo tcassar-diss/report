@@ -42,7 +42,7 @@
 
 - Bring up that state of the art is `seccomp`!
 - Seccomp defines one global filter for an application.
-- Applications are getting constantly bigger in terms of LoCs
+- Applications are getting constantly bigger in terms of LoCs (SYSFILTER)
 
   - => (legitimately) needs access to more system calls
   - => seccomp filters must be more permissive, therefore less restrictive
@@ -450,4 +450,3 @@ needs doing.
     (e.g. `pt_regs` on Arm: bad idea!)
     -Takeaway - Dynamic application, system with compartmentalisation primitives,
     high-security/low syscall-rate application => favour `addrfilter` over `seccomp`
-

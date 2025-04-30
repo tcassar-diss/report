@@ -111,10 +111,10 @@ specific kernel data structures and \ac{bpf} helper functions to implement the
 steps we outlined in Section \ref{sec:design}, as well as highlight
 implementation challenges.
 
-\subsubsection{Executing on Every Syscall}
+\subsubsection{Executing on Every system call}
 
 The Design section specifies that the core filtering logic needs to be run on
-every syscall. This was a challenging problem to solve, as most \ac{bpf}
+every system call. This was a challenging problem to solve, as most \ac{bpf}
 use cases are targeted to specific actions on specific events, and not a broad
 class of events. Furthermore, a lack of documentation meant that many hours were
 spent researching by reading source code and commit messages in order to get to
@@ -129,7 +129,7 @@ tools collect runtime diagnostics or performance data without altering program
 behavior. \ac{bpf} programs can be \textit{attached} to tracepoints, meaning they 
 are run when some code path passes the tracepoint. Linux machines have lots of 
 different tracepoints for different events, including one for each different type of 
-syscall. 
+system call. 
 
 \begin{figure}[h!]
     \centering
@@ -145,9 +145,9 @@ syscall.
 
     % Nodes
     % Corrected text inside the first node label - removed the extra '}'
-    \node (user_start) [block] {User Space\\(\small Initiates Syscall)}; % <-- Corrected text inside {} and ensured ending ';'
+    \node (user_start) [block] {User Space\\(\small Initiates system call)}; % <-- Corrected text inside {} and ensured ending ';'
     \node (raw_tp) [highlight, below=of user_start] {{\textbf{raw\_tp/sys\_enter}\\(\small BPF Filter Hook Here!})};
-    \node (kernel_handler) [block, below=of raw_tp] {{Kernel Syscall Handler\\(\small Processes Request})};
+    \node (kernel_handler) [block, below=of raw_tp] {{Kernel system call Handler\\(\small Processes Request})};
     \node (user_end) [block, below=of kernel_handler] {{User Space\\(\small Receives Result})};
 
     % Arrows
@@ -156,44 +156,44 @@ syscall.
     \path [line] (kernel_handler) -- node [right, pos=0.5] {\small Returns Result} (user_end);
 
     \end{tikzpicture}
-    \caption{Simplified Syscall Execution Flow with raw\_tp/sys\_enter Tracepoint}
-    \label{fig:syscall_rawtp_flow}
+    \caption{Simplified system call Execution Flow with raw\_tp/sys\_enter Tracepoint}
+    \label{fig:system call_rawtp_flow}
 \end{figure}
 
-These syscall-specific tracepoints make the syscall's arguments available to the 
+These system call-specific tracepoints make the syscall's arguments available to the 
 \ac{bpf} program attached to the tracepoint in a type-safe way. However, these user-
-friendly syscall-specific tracepoints do not fulfil the design requirements for \af 
-as it will not execute \textbf{for every syscall}. Therefore, we elected to use a
+friendly system call-specific tracepoints do not fulfil the design requirements for \af 
+as it will not execute \textbf{for every system call}. Therefore, we elected to use a
 raw tracepoint.
 
-The \texttt{sys\_enter} raw tracepoint is executed on every syscall before the
-kernel starts to process the syscall. This is helpful, as it allows us to block
-a syscall (if need be) before the kernel begins to execute it. We also need
-access to the syscall number, which is a syscall argument on Linux/x86. Unhelpfully, 
-raw tracepoints do not make the syscall arguments easily available to the attached 
+The \texttt{sys\_enter} raw tracepoint is executed on every system call before the
+kernel starts to process the system call. This is helpful, as it allows us to block
+a system call (if need be) before the kernel begins to execute it. We also need
+access to the system call number, which is a syscall argument on Linux/x86. Unhelpfully, 
+raw tracepoints do not make the system call arguments easily available to the attached 
 \ac{bpf} program. Instead, the attached program receives a pointer to an array of 
 zero length (a C pattern for defining a ``variable length'' array) with arguments 
-differing per-syscall. One commonality between every syscall is that the syscall 
+differing per-system call. One commonality between every syscall is that the syscall 
 number is available as the second argument in the array. 
 
 \begin{table}[h!]
 \centering
-\caption{Comparison of \texttt{raw\_tp/sys\_enter} and Syscall-Specific Tracepoints for Filtering Every Syscall}
+\caption{Comparison of \texttt{raw\_tp/sys\_enter} and system call-Specific Tracepoints for Filtering Every Syscall}
 \begin{tabular}{|p{6cm}|p{6cm}|}
 \hline
-\texttt{raw\_tp/sys\_enter} & \textbf{Syscall-Specific} \\
+\texttt{raw\_tp/sys\_enter} & \textbf{system call-Specific} \\
 \hline
 \multicolumn{2}{|c|}{\textbf{Pros}} \\
 \hline
-Executes on \textbf{every} syscall & Type-safe access to arguments \\
-Single attachment for all syscalls & Arguments easily available/structured \\
-Runs before kernel processes syscall & Easier to inspect args for \textit{that} syscall \\
-Syscall number available (arg 1) &  \\
+Executes on \textbf{every} system call & Type-safe access to arguments \\
+Single attachment for all system calls & Arguments easily available/structured \\
+Runs before kernel processes system call & Easier to inspect args for \textit{that} syscall \\
+system call number available (arg 1) &  \\
 \hline
 \multicolumn{2}{|c|}{\textbf{Cons}} \\
 \hline
-Generic argument access (pointer to array) & Only triggered by a \textbf{specific} syscall \\
-Arguments less easily available & Requires many attachments for all syscalls \\
+Generic argument access (pointer to array) & Only triggered by a \textbf{specific} system call \\
+Arguments less easily available & Requires many attachments for all system calls \\
 Less user-friendly interface for arguments &  \\
 \hline
 \end{tabular}
@@ -201,8 +201,8 @@ Less user-friendly interface for arguments &  \\
 \end{table}
 
 Therefore, attaching the core \ac{bpf} program to a \texttt{sys\_enter} raw
-tracepoint allows \af to run on every syscall, and provides access to the
-syscall number, making the tracepoint a suitable attachment site for our
+tracepoint allows \af to run on every system call, and provides access to the
+system call number, making the tracepoint a suitable attachment site for our
 program. The pros and cons of using a \texttt{raw\_tp} are summarised in
 Table~\ref{tab:tracepoint_comparison}. Attaching the \ac{bpf} program is done by calling a Go function that
 \texttt{ebpf-go} generates from the \ac{bpf} source. 
@@ -213,7 +213,7 @@ turn our attention to the business logic.
 \subsubsection{Fork Following}
 
 The first thing to do when the filtering logic is run is to decide whether we
-need to apply our filter to the current syscall and implement fork following. 
+need to apply our filter to the current system call and implement fork following. 
 
 Fork following is the idea that we should apply our filter to any children of a
 filtered process. That is, if we apply a filter to an app and it forks/execs,
@@ -228,7 +228,7 @@ are read from the current process's \texttt{task} struct (the kernel data
 structure containing process information) obtained by calling the
 \texttt{bpf\_get\_current\_task\_btf()} helper function. 
 
-On each syscall, we check to see if the calling \ac{pid} is present in the
+On each system call, we check to see if the calling \ac{pid} is present in the
 ``follow'' map using the \texttt{bpf\_map\_lookup\_elem()} helper. If it is, we continue 
 on in the program. If it is not, we check to see if the parent \ac{pid} is
 present in the map. If neither \acp{pid} are present, then we return from the
@@ -236,9 +236,9 @@ program with an error code of 0. Otherwise, we use
 \texttt{bpf\_map\_insert\_elem()} to add the calling \ac{pid} to the 
 ``follow'' map.
 
-\subsubsection{Finding the Syscall Site}\label{subsec:impl-syscall-site}
+\subsubsection{Finding the system call Site}\label{subsec:impl-syscall-site}
 
-Next, \af needs to find the syscall site - the \textbf{first non-\ac{libc} return pointer} in the userspace stack at the time the syscall was made.
+Next, \af needs to find the system call site - the \textbf{first non-\ac{libc} return pointer} in the userspace stack at the time the syscall was made.
 
 To do this, we pulled the first 16 stack frames from the user stack with the 
 \texttt{bpf\_get\_stack()} helper function and the \texttt{BPF\_F\_USER\_STACK}
@@ -257,21 +257,21 @@ This approach was accurate, but too slow to be performant. Calling \texttt{bpf\_
 slow, as it walks the in-kernel \ac{vma} red-black tree. Red-black trees scale
 well, but are slow to use as they are a pointer based data structure \cite{pointer-based-ds-slow}. Moving to
 a child node involved loading memory which likely is not already in cache.
-Finding one syscall site often involves walking through multiple \ac{libc}
+Finding one system call site often involves walking through multiple \ac{libc}
 addresses before finding the first non-\ac{libc} return pointer. When run in
 verbose mode, \af collects runtime statistics
 (Section~\ref{subsubsec:err-handling}): informally inspecting the logs shows that
 applications like Redis has anywhere from 3-7 stack frames with return pointers 
-within \ac{libc}. This will result in 4-8 lookups per syscall (including the
+within \ac{libc}. This will result in 4-8 lookups per system call (including the
 first non-\ac{libc} return pointer), detrimentally affecting performance.
 
-\subsubsection{Optimising Syscall Site
+\subsubsection{Optimising system call Site
 Finding}\label{subsubsec:impl-find-site-opt}
 
 We noted that a lot of system call sites are frequently reused, and could
 therefore maintain a mapping from return pointer to relevant whitelist. However,
 this approach suffers from issues with cache coherency. While effective at
-reducing lookups, the cache would need to be flushed every time a syscall which
+reducing lookups, the cache would need to be flushed every time a system call which
 can change the \ac{vma} is made (e.g. \texttt{mmap}, \texttt{munmap},
 \texttt{brk}, etc\dots). 
 
@@ -282,7 +282,7 @@ engineering effort orthogonal to our research. We would also need to identify
 which tracepoint(s) (or, instrumentation points) this program would need to be
 attached to. We would have to configure this program to run \textbf{before} the
 \af core program, which would be a challenge as the first instrumentation point
-in the syscall path is the \texttt{sys\_enter} raw tracepoint.
+in the system call path is the \texttt{sys\_enter} raw tracepoint.
 
 Having considered these alternatives, we decided on a much simpler
 implementation. Our solution to speed up identifying whether return pointers
@@ -297,7 +297,7 @@ would not introduce a security risk. Using a cached \texttt{libc\_ranges} map
 respects this design criterion. If an attacker moves the address of \ac{libc},
 then the stack pointer will be identified as the first non-\ac{libc} return
 pointer. Therefore, \af will try to use a \ac{libc} whitelist to determine
-whether to allow the syscall. Since \ac{libc} whitelists will not exist due to
+whether to allow the system call. Since \ac{libc} whitelists will not exist due to
 the way whitelists are generated
 (Section~\ref{subsubsec:impl-whitelist-gen}), this will \textbf{always result in
 \af intervening}.
@@ -332,23 +332,23 @@ case the stack has ended. If this happens, we mark that there was no
 non-\ac{libc} address present in the ``stats'' map
 (Section~\ref{subsubsec:err-handling}).
 
-With syscall-site discovery now optimized, the next task is to associate each 
+With system call-site discovery now optimized, the next task is to associate each 
 identified call site with the shared library that contains it.
 
 \subsubsection{Finding the Shared Library File}\label{subsec:impl-find-vma}
 
 Finding the shared library file which contains the address previously marked as
-the syscall site is done by traversing the \ac{vma} red-black tree in the
+the system call site is done by traversing the \ac{vma} red-black tree in the
 kernel. This is done by using the \texttt{bpf\_find\_vma()} helper, which was used
-in the unoptimised implementation of the syscall site identification logic.
+in the unoptimised implementation of the system call site identification logic.
 
-\texttt{bpf\_find\_vma()} returns the \texttt{vm\_area} struct associated with the
-return pointer's address. The \texttt{vm\_area} struct is a kernel data structure
+\texttt{bpf\_find\_vma()} returns the \texttt{vm\_area\_struct} struct associated with the
+return pointer's address. The \texttt{vm\_area\_struct} struct is a kernel data structure
 which holds information about the process's \ac{vma} including addresses,
 permissions, and the file which backs the memory. Here, we are interested in the
 file which backs the memory region. We read this by supplying a function
 to the \texttt{bpf\_find\_vma()} helper which is called when the right
-\texttt{vm\_area} struct is found. Then, we use \texttt{bpf\_probe\_read()} to make
+\texttt{vm\_area\_struct} struct is found. Then, we use \texttt{bpf\_probe\_read()} to make
 the series of reads needed to find the filename
 
 We then use the filename as a key in another \ac{bpf} map - the ``whitelists''
@@ -361,19 +361,19 @@ Section~\ref{subsec:impl-frontend}.
 \subsubsection{Checking the Whitelist}
 
 Whitelists are implemented as a bit array, 56 bytes long. Bit position $i$ is
-set to $1$ if and only if syscall number $i$ is allowed. We opted for a bit
+set to $1$ if and only if system call number $i$ is allowed. We opted for a bit
 array as it is a compact, efficient data structure and can be queried easily.
 
-To check if a syscall is allowed, we divide the syscall number by 8 to identify in 
-which byte the relevant bit is. We then take the syscall number modulo 8 to
+To check if a system call is allowed, we divide the syscall number by 8 to identify in 
+which byte the relevant bit is. We then take the system call number modulo 8 to
 identify which bit in the byte we must look at. If the value of the bit
-corresponding to the syscall number is $1$, then the syscall is allowed and we
+corresponding to the system call number is $1$, then the syscall is allowed and we
 return with exit code 0. Otherwise, we intervene.
 
 \subsubsection{Intervening}\label{subsubsec:impl-intervening}
 
 The user can choose between three intervention policies for when a
-non-whitelisted syscall is made, as specified in 
+non-whitelisted system call is made, as specified in 
 Section~\ref{subsec:requirements}. These are to warn the user, kill the
 malicious process, or kill all processes in the ``follow'' map.
 
@@ -381,26 +381,26 @@ To support these configurable modes, we used a \texttt{BPF\_MAP\_TYPE\_ARRAY}
 called ``cfg\_map''. It is an array of length one which is set by the frontend
 before the program is attached. The array stores an integer which corresponds to
 a ``config-type'' enum and instructs the \ac{bpf} program how to respond to a
-disallowed syscall.
+disallowed system call.
 
 In kill mode, we only kill the malicious process. This can be done synchronously
-(i.e. \textit{before} the kernel begins to process the syscall) from \ac{bpf}
+(i.e. \textit{before} the kernel begins to process the system call) from \ac{bpf}
 using the \texttt{bpf\_send\_signal()} helper function. 
 \texttt{bpf\_send\_signal()} can only be used to send signals to the calling
 process - by sending a \texttt{SIGKILL}, we kill the malicious process.
 
 If the user has configured warn mode or ``kill all'' mode, then userspace needs
 to be involved to some degree. To do this, we use \iac{bpf} ringbuffer to inform
-userspace when a syscall has tripped the filter. The ringbuffer is a thread-safe
+userspace when a system call has tripped the filter. The ringbuffer is a thread-safe
 \ac{bpf} data structure which efficiently transfers data between the kernel and
-userspace. When a disallowed syscall happens, a struct containing syscall
+userspace. When a disallowed system call happens, a struct containing syscall
 number and offending \ac{pid} is written to the ringbuffer and quickly read by
 userspace. This procedure is visualised in Figure~\ref{fig:intervention-flowchart}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8 \linewidth]{./diagrams/profiling-flow.drawio.pdf} 
-\caption{Flowchart illustrating the intervention strategies based on the configured mode when a non-whitelisted syscall occurs. Actions are separated into BPF (Kernel) and Frontend (Userspace) lanes.}
+\caption{Flowchart illustrating the intervention strategies based on the configured mode when a non-whitelisted system call occurs. Actions are separated into BPF (Kernel) and Frontend (Userspace) lanes.}
 \label{fig:intervention-flowchart}
 \end{figure}
 
@@ -410,7 +410,7 @@ before exiting with code 0.
 
 The userspace code will act differently upon receiving a packet in the
 ringbuffer. If warn mode is enabled, it will just log the fact that a \ac{pid}
-tried to make a disallowed syscall. In kill-all mode, it will iterate through
+tried to make a disallowed system call. In kill-all mode, it will iterate through
 every \ac{pid} in the ``follow'' map and send a \texttt{SIGKILL} to each
 process.
 
@@ -461,7 +461,7 @@ defined.
 We also instrumented \af to report profiling information for each stage of the
 filtering process. An profile for a ``Hello, World'' application is provided in 
 Appendix~\ref{tab:profile-info}. Profiling information was used to identify that
-finding the syscall site was the slowest step of \af before the optimisation
+finding the system call site was the slowest step of \af before the optimisation
 discussed in Section~\ref{subsubsec:impl-find-site-opt} was applied.
 
 Gathering profile data was implemented with a ringbuffer, despite the extra
@@ -562,7 +562,7 @@ Upon reading data, it computes the difference between the timestamps in for each
 packet in the ringbuffer, and writes this information to a buffered \ac{io} 
 writer (\texttt{bufio}) in Go. This writer is flushed when the profiling 
 ringbuffer is closed: either if the user presses Ctrl-C, an error during 
-reading occurs, or the program being profiled finishes/trips the syscall 
+reading occurs, or the program being profiled finishes/trips the system call 
 filter.
 
 \subsection{Configuration and the Go Frontend}\label{subsec:impl-frontend}
@@ -715,10 +715,10 @@ functionality is provided in Figure~\ref{fig:frontend-flowchart}.
 
 The \ac{cli} is built using the \texttt{urfave/cli/v2} Go framework. It provides
 the main command to filter an application, ``\af'', which also takes a whitelist
-(generated by \texttt{addrfilter generate /path/to/executable args...}) and an
+(generated by \texttt{afgen /path/to/executable args...}) and an
 executable and its arguments. 
 
-The user is able to configure the application to warn when a disallowed syscall
+The user is able to configure the application to warn when a disallowed system call
 is made by using the \texttt{--warn} flag, or to kill all processes with the
 \texttt{--kill-all} flag. 
 
@@ -777,7 +777,7 @@ When configuring the command, care needs to be taken to make sure that we do not
 introduce a security flaw. A user needs the \texttt{CAP\_SYS\_ADMIN} privilege
 to attach \iac{bpf} program, and therefore \af needs to be run by a user with
 the \texttt{CAP\_SYS\_ADMIN} privilege. However, since we are spawning an
-executable via an \texttt{execve} syscall (\texttt{Command.Start} uses
+executable via an \texttt{execve} system call (\texttt{Command.Start} uses
 \texttt{execve} behind the scenes), the filtered process will also inherit the
 \texttt{CAP\_SYS\_ADMIN} privileges.
 
@@ -809,25 +809,25 @@ address of \ac{libc}.
 
 \texttt{findLibc()} finds the start and end address of \ac{libc} by parsing the
 \texttt{/proc/PID/maps} pseudofile in userspace. Each line of \texttt{/proc/PID/maps}
-contains information about \texttt{vm\_area} struct in the process's \ac{vma}. We
+contains information about \texttt{vm\_area\_struct} struct in the process's \ac{vma}. We
 built a regular expression to match each line of \texttt{/proc/PID/maps}, and
-used match groups to extract the \texttt{vm\_area} struct's start and end address.
+used match groups to extract the \texttt{vm\_area\_struct} struct's start and end address.
 We then tracked which the smallest and largest start/end addresses we saw was
 and set these to be \acg{libc} start and end addresses.
 
 We found in development that we would sometimes begin parsing the pseudofile
-before each \texttt{vm\_area} struct had been loaded by the linker. This lead to
+before each \texttt{vm\_area\_struct} struct had been loaded by the linker. This lead to
 \af exiting reporting that \textit{no \ac{libc} addresses were found}, and in
-the worst case, confusing bugs were syscall sites were incorrectly being marked as 
+the worst case, confusing bugs were system call sites were incorrectly being marked as 
 having come from \ac{libc}. This was happening as parsing started while the
 linker was loading \ac{libc}, so some \ac{libc} addresses were not being skipped
-when finding the syscall site.
+when finding the system call site.
 
 The fix here was to add retry logic to the parsing. If no \ac{libc} was found,
 then we increment a retry counter, close the file, and retry parsing. Each time
 we parse, we count the number of lines in the pseudofile: if \ac{libc} is found,
 then we close and reopen the file and check its line count. If they are the
-same, then we know we have accounted for every \texttt{vm\_area} struct that was
+same, then we know we have accounted for every \texttt{vm\_area\_struct} struct that was
 mapped to \ac{libc}.
 
 
@@ -873,7 +873,7 @@ the stats map before exiting and dump its contents to \ac{stdout} as JSON.
 \subsection{Additional Tooling}
 
 Alongside \afss,~we also implemented additional tooling. This tooling is either
-orthogonal to our research (\texttt{addrfilter generate}) or development tooling
+orthogonal to our research (\texttt{afgen}) or development tooling
 meant to aid evaluation (\texttt{af-seccomp}, \texttt{syso}), and so will not be
 discussed in detail. 
 
@@ -888,9 +888,9 @@ whitelist generation program kept in \texttt{bpf/filter/} and
 the fact that the \ac{bpf} toolchain does not provide a linker, so workarounds
 included \texttt{\#include}-ing \ac{bpf} source files.
 
-The \ac{bpf} program reused the fork following, syscall site identification, and
+The \ac{bpf} program reused the fork following, system call site identification, and
 filename finding functionality from \afss. Instead of checking to see if a
-syscall is on in the whitelist, we add the syscall number to the whitelist. 
+system call is on in the whitelist, we add the syscall number to the whitelist. 
 
 The frontend for the generation functionality spawns the application in the same
 way as \af and allows for the same debug/profiling options. Instead of parsing a
@@ -906,7 +906,7 @@ report. Note that in production, dynamic-analysis based generation is \textbf{a
 bad idea}, as it can easily lead to false-positives which will unnecessarily
 kill an application.
 
-\subsubsection{Seccomp Filtering for Evaluation}
+\subsubsection{Seccomp Filtering for Evaluation}\label{subsubsec:syso-impl}
 
 To be able to compare the runtime cost of \af to the current gold standard
 filtering solution, we implemented a program to parse our whitelist format,
@@ -923,7 +923,7 @@ spawning code.
 We started by creating a seccomp filter with \texttt{libseccomp.NewFilter()}, 
 and set its default action to \texttt{libseccomp.KillProcess}. We then parsed
 and flattened the (\afss)~ whitelist passed to \texttt{af-seccomp} via the
-\ac{cli}, and added an \texttt{libseccomp.Allow} rule for each syscall number in
+\ac{cli}, and added an \texttt{libseccomp.Allow} rule for each system call number in
 the whitelist.
 
 \todo{how to justify the \texttt{syso} design decisions? they are silly because
@@ -933,12 +933,12 @@ the whitelist.
 
 To calculate the level privilege reduction gained by using \af we implemented a
 tool called \texttt{syso}. It is an evaluation tool which uses dynamic analysis
-to track which shared libraries are making which syscalls. It does
+to track which shared libraries are making which system calls. It does
 stack-unwinding in kernel, and aligns the addresses with values in
-\texttt{/proc/PID/maps}. \texttt{syso} also counts the numbers of each syscall 
+\texttt{/proc/PID/maps}. \texttt{syso} also counts the numbers of each system call 
 made as this was hypothesised to be a good indicator of how much runtime cost
 \af will incur. This is discussed further in Section \todo{forward reference slowdown
-with syscall count}.
+with system call count}.
 
 When execution finishes, \texttt{syso} writes a report to \ac{stdout} with three
 figures: the privilege score of the application filtered with seccomp, the
