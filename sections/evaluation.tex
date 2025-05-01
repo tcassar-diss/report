@@ -6,7 +6,7 @@ We quantify the additional runtime cost that developers can expect from using
 \af  instead of seccomp, and look to prove the correctness of \af.
 
 We start by sharing our test environment and the version of \af we used to
-aid reproducibility. We then move on to showing that \af is correct: that
+aid repeatability. We then move on to showing that \af is correct: that
 is, it correctly identifies which shared library made which system call without
 affecting normal system call function. Having shown correctness, we move on to
 security evaluation, where we define a privilege reduction metric and apply the
@@ -77,11 +77,8 @@ Table~\ref{tab:test_environment}.
 For experiments involving data transfer over a network (such as
 \texttt{redis-benchmark} and \texttt{wrk} for Nginx), the server and benchmark
 client were both run on the same server to avoid the network becoming a bottleneck.
-
-While experiments were performed on server-grade hardware, the results should be
-generalisable to user-oriented systems. Benchmark results are always reported
-with \af enabled and disabled to help the reader understand relative
-performance differences.
+While experiments were performed on server-grade hardware, the results should
+generalise to user-oriented systems.
 
 \subsection{Benchmark Selection}\label{subsec:benchmark-selection}
 
@@ -462,7 +459,7 @@ estimate the privilege of a seccomp filter.
 
 The privilege reduction results are tabulated in Table~\ref{tab:pr-results}.
 Since \texttt{syso} is also a dynamic analysis based tool, we ran each
-benchmark three times with \texttt{syso} enabled and unioned the set of
+benchmark three times with \texttt{syso} enabled and took the union of the set of
 system calls attributed to each compartment across all three runs. This
 increased our confidence that we were gathering a representative sample of
 system calls without needing to invest significant engineering effort in a static
@@ -543,7 +540,7 @@ investigated to see if the number of shared libraries in a binary had an impact
 on the privilege reduction level, however we found no correlation. The Postgres
 binary has 42 shared libraries (measured with \texttt{ldd}) and Nginx has 8; 
 both exhibit similar privilege reduction levels ($\sim$ 24\%). Redis, which
-shows 55\% privilege reduction has 18 shared libaries. 
+shows 55\% privilege reduction has 18 shared libraries. 
 
 A more likely reason for this could be to do with the distribution of system
 calls within a binary. Applications showing higher privilege reduction scores
@@ -584,7 +581,7 @@ Each experiment was repeated three times and, as was the case for our Security
 Analysis, all raw data, analysis scripts, and plots are available at the
 repository linked in Appendix~\ref{apx:eval-artefacts}).
 
-Each benchmark that we used is comprised of a set of microbenchmarks. In
+Each benchmark that we used is comprised of a set of micro-benchmarks. In
 \textcite{HeiserBenchmarkingCrimes}, Heiser, a respected researcher in the
 \ac{os} community, argues that there is no good reason to report an arbitrary
 subset of benchmark results. He goes further, and argues that this is not good
@@ -614,19 +611,19 @@ $\frac{\sigma}{\sqrt n}$.
 \subsubsection{Redis Slowdown}\label{subsubsec:redis-slowdown}
 
 Figure~\ref{fig:redis-perf} indicates that \af incurs a performance cost when
-run on Redis. Subfigure~\ref{fig:redis-rps} shows a significant reduction in
+run on Redis. Figure~\ref{fig:redis-rps} shows a significant reduction in
 requests per second across all tests in the \texttt{redis-benchmark} suite
 except the \texttt{LRANGE\_*} suite of tests. The median percentage slowdown in
 throughput was 8.43\% in the \texttt{HSET} test.
 
 We observed no significant difference in the 99th percentile response
 latency in all test cases except the \texttt{*ADD} tests 
-(Subfigure~\ref{fig:redis-p99}). We observe a spike in the \texttt{LRANGE\_600}
+(Figure~\ref{fig:redis-p99}). We observe a spike in the \texttt{LRANGE\_600}
 test case, but also see a very large error bar which overlaps with that of
 seccomp's measured latency. Therefore, we do not conclude these measurements to
 be significantly different.
 
-Subfigure~\ref{fig:redis-perf} shows that every test case showed increased
+Figure~\ref{fig:redis-perf} shows that every test case showed increased
 average latency and decreased throughput when using \af instead of seccomp.
 However, \textbf{percentage differences are almost always within $\pm 10\%$}.
 This shows a modest slowdown and, when contextualised with an almost 56\%
@@ -668,9 +665,9 @@ privilege reduction, makes \af a compelling solution.
 \subsubsection{Nginx Slowdown}\label{subsubsec:nginx-slowdown}
 
 We visualise the performance cost of \af on Nginx in
-Figure~\ref{fig:nginx-perf}. We see a (staistically significant) 25.1\%
+Figure~\ref{fig:nginx-perf}. We see a (statistically significant) 25.1\%
 reduction in throughput and a 36.1\% increase in average latency, shown in
-Subfigure~\ref{fig:nginx-percdiff}. This is a more significant slowdown than
+Figure~\ref{fig:nginx-percdiff}. This is a more significant slowdown than
 we saw with Redis. Identifying the exact cause of the slowdown is reserved
 for future work, as it would involve profiling, trying different test
 parameters, and more. 
@@ -679,7 +676,7 @@ One key difference in the way the tests were run was the concurrency level used
 in Nginx: we simulated 200 client connections using four threads as noted in
 Section~\ref{subsubsec:nginx-just}. It could be that this high level of
 concurrency stressed the operating system more (as Nginx worker threads may need
-to be descheduled for \ac{os} upkeep) so than in Redis's case which could
+to be de-scheduled for \ac{os} upkeep) so than in Redis's case which could
 explain the increased latency and reduced throughput.
 
 Nginx exhibited a privilege reduction of 25\% in Table~\ref{tab:pr-results}: as
@@ -726,7 +723,7 @@ benchmarks.
 \texttt{fio}'s benchmark results are visualised in Figure~\ref{fig:fio-perf}.
 We've omitted the percentage difference plots as we saw a 0.0\%, 0.0\%, 0.0\%, and
 (statistically insignificant) +2.7\% difference in IOPS throughput, average,
-P99, and P99.99 latencies respectively. 
+P99, and P99.99 latency respectively. 
 
 We speculate that \texttt{fio}'s performance was almost completely
 unaffected by \af likely because we used a block size of 1MB when
@@ -767,7 +764,7 @@ a lot of \ac{io} activity.
 
 \subsubsection{Postgres Slowdown}\label{subsubsec:postgres-slowdown}
 
-Postgres shows slowdown (Figure~\ref{fig:pgs-perf}) somewhere inbetween that
+Postgres shows slowdown (Figure~\ref{fig:pgs-perf}) somewhere in between that
 of Redis and Nginx. \af incurs a 16\% reduction in transaction throughput, and
 a 19\% increase in average latency. Postgres exhibited similar privilege
 reduction to Nginx, around 25\%. 
@@ -843,7 +840,7 @@ leads to a low system call frequency, and therefore, no significant overhead.
         \centering
         % Choose the best latency plot, e.g.:
         \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_time.pdf} 
-        \caption{\ac{npb} Time taken to run each microbenchmark (\af vs no
+        \caption{\ac{npb} Time taken to run each micro-benchmark (\af vs no
         filter)}
         \label{fig:npb-time}
     \end{subfigure}
