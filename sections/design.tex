@@ -9,33 +9,28 @@
 % ------------------------
 % Design introduction: what is the design philosophy? why?
 
-\af is a complex piece of systems software and therefore required a
-careful design phase. In a systems security project, added code and complexity
+\af is a complex piece of systems software and therefore required a careful
+design phase. In a systems security project, added code and complexity
 represent more chances for vulnerabilities to appear. Therefore, it was
-important to design \af to be \textbf{as minimal as possible} while fulfilling
-the promise of the proposed fine-grained filtering.
+important to design \af to be \textit{as minimal as possible} while
+fulfilling the promise of the proposed fine-grained filtering.
 
-To do this, we defined a \textbf{threat model} (\ref{subsec:threat-model}) and
-let primary requirements (\ref{subsec:requirements}) follow. These primary
-requirements are presented alongside \textit{corollary requirements}
-(\ref{subsubsec:corollary-reqs}) and design assumptions
-(\ref{subsec:assumptions}).
+To do this, we defined a \textbf{threat model} and let primary requirements
+follow. These primary requirements are presented alongside our design
+assumptions .The project's nature also requires some
+auxiliary tooling, which is discussed after \afg design is
+presented.
 
-\afg architecture is visualised in Figure \ref{fig:arch-overview}. Each
-section's function is motivated in turn and key design decisions are justified.
-The project's nature also requires some auxiliary tooling, which is discussed
-after \afg design is presented.
-
-\subsection{Threat Model}\label{subsec:threat-model}
+\subsection{Objectives, Threat Model, and Assumptions}\label{subsec:threat-model} \todo{big change}
 
 We started by creating a \textbf{threat model} which lays out the situations and
 pre-conditions where \af is effective at protecting an application.
 
 Firstly, we assume that 1) a \ac{ta} has gained \ac{rce} privileges on the host
 machine \footnote{We refer to the machine running \af as the \textit{host
-}}. That is, the \ac{ta} can execute any code they wish on the host. This is
-one of the most serious breaches that can happen and often lead to denial of
-service, data loss, or data theft \cite{RCE_BAD}. 
+}}. That is, the \ac{ta} can execute any user space code they wish on the
+host. This is one of the most serious breaches that can happen and often
+lead to denial of service, data loss, or data theft \cite{RCE_BAD}. 
 
 The attacker aims to use their \ac{rce} exploit to \textbf{escalate privilege}. This
 means we assume that 2) the \ac{ta} doesn't have root privileges on the host,
@@ -68,8 +63,6 @@ about exactly \textbf{what \af must protect against}.
 % Use/reference BPF threat model
 % https://www.linuxfoundation.org/hubfs/eBPF/ControlPlane%20%E2%80%94%20eBPF%20Security%20Threat%20Model.pdf#page=11.14
 
-\subsection{Requirements} \label{subsec:requirements}
-
 \afg key feature is that it should detect where an application makes a 
 \textbf{disallowed system call} and intervene accordingly. 
 
@@ -80,8 +73,12 @@ availability and data integrity/confidentiality on a per-application basis.
 
 We should see a \textbf{significant reduction} in the set of system calls a \ac{ta}
 can access after compromising an application, and we want to do this
-\textbf{without detrimentally impacting performance}.\todo{see if these
-requirements can be made more concrete without giving numbers}
+\textbf{without detrimentally impacting performance}.
+
+Finally, we note that system call filtering literature has not defined a standard
+way to measure the reduction in privilege that a particular filtering
+strategy provides. Therefore, we look to propose our own metric to quantify
+the level of privilege reduction afforded by \af when compared to seccomp.
 
 To summarise 
 
@@ -90,55 +87,36 @@ To summarise
     \item \af \textit{shall} \textbf{identify the specific memory region} within the \ac{vma} from which a system call originates. If the invoked system call is not included in the whitelist associated with that originating region, \af \textit{shall} \textbf{trigger an intervention}.
     \item The intervention action taken by \af upon detecting a non-whitelisted system call \textit{shall} be \textbf{configurable by the user}. The available configuration options \textit{shall} include, at minimum: (a) logging a warning, (b) terminating the process that issued the disallowed system call, and (c) terminating all processes currently being monitored by \af.
     \item \af \textit{shall} demonstrably achieve a \textbf{greater reduction in process privileges} compared to a standard Linux seccomp filter configuration. This security enhancement \textit{shall} be achieved while incurring a runtime performance overhead deemed acceptable within pre-defined limits.
+    \item The privilege reduction afforded by \af must be able to be quantified
+        with a newly proposed metric.
 \end{enumerate}
 
-\subsection{Corollary Requirements} \label{subsubsec:corollary-reqs}
-
 The primary requirements listed above leave some questions unanswered.
-Developers don't know which system calls their application makes\todo{does this
-need a citation?} - let alone
-which shared libraries are responsible for each system call. Therefore, we also
-provide \textbf{automated whitelist generation tooling} with \af. 
-
-system call filtering literature hasn't defined a standard way to measure the
-reduction in privilege that a particular filtering strategy provides. Therefore,
-we look to propose our own metric to quantify the level of privilege reduction
-afforded by \af when compared to seccomp.
-
-\subsection{Assumptions}\label{subsec:assumptions}
+Developers do not know which system calls their application makes - let alone
+which shared libraries invoke each system call. Therefore, we also
+provide \textbf{automated whitelist generation tooling} alongside \af. 
 
 There are some rare cases which require significant engineering effort to cover.
 In these cases, we make some \textbf{simplifying assumptions}. This was done
 primarily to avoid adding unnecessary code and complexity to \afg design. 
  
 One of these is handling the case where \acg{libc} address space changes during
-execution. This is technically possible, but is rarely seen in production.
+execution. This is technically possible, but is rarely seen in production -
+furthermore, it allows for performance optimisation opportunities as detailed in
+Section~\ref{subsubsec:impl-find-site-opt}.
+
 Care needs to be taken to ensure that this assumption doesn't introduce a
-security risk during the implementation. System calls made in the case where 
-\ac{libc} has been changed should be treated as disallowed system calls.
+security risk during the implementation (see Section~\ref{subsubsec:impl-find-site-opt}). 
+System calls made in the case where \ac{libc} has been changed should be
+treated as disallowed system calls.
 
-% XXX: this requirement is satisfied by IMPLEMENTATION DETAILS
-%  - libc moved => libc calls will be treated as non-libc
-%  - => check to see if in libc whitelist; no libc whitelist guaranteed
-%  - (because of generation) => disallowed
-
-We also assume that \ac{libc} is mapped contiguously in memory, shown in
-Figure~\ref{fig:libc-contiguous}. Again, this is
+We also assume that the \texttt{\_\_code\_\_} section of the \ac{libc}
+executable is mapped contiguously in memory. Again, this is
 true (almost) without exception\footnote{Custom patches to the kernel could
 violate this invariant} and reduces the code base size and complexity.
 It is also important to note that this assumption does not introduce a security
 risk due to the way that system call site identification is implemented and shown in
 Section \ref{subsubsec:impl-find-site-opt} \cite{glibc-dl-map-segments-h}.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.6 \linewidth]{./diagrams/libc-contig-vs-noncontig.drawio.pdf} 
-    \caption{A figure showing what a contiguous mapping of \ac{libc} in a
-    process's address space vs a non-contiguously mapped \ac{libc}.}
-    \label{fig:libc-contiguous}
-\end{figure}
-
-\subsection{Limitations}
 
 The limitations of this design are linked to these assumptions. If \acg{libc}
 address is not contiguous, then \af will not be able to find non-\ac{libc}
@@ -292,7 +270,7 @@ can now figure out which shared library made the system call. Doing this is a
 question of checking the process's \ac{vma} to find which memory region the
 function belongs to. 
 
-Each shared library exists in the \ac{vma} as a \texttt{file backed memory region}.
+Each shared library exists in the \ac{vma} as a \textit{file backed memory region}.
 In-kernel, the \ac{vma} is implemented as a \texttt{vma\_struct} struct with a
 (indirect) reference to the name of it's backing file. Thus, finding which
 shared library ``owns'' the system call site is a question of finding the
@@ -302,7 +280,7 @@ Alternatively, this information can be read from userspace via the
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8 \linewidth]{./diagrams/core-filter-flowchart.drawio.pdf}
+    \includegraphics[width=\linewidth]{./diagrams/core-filter-flowchart.drawio.pdf}
     \caption{A figure showing \afg core filtering logic at a high level.}
     \label{fig:core-filter-flowchart}
 \end{figure}
@@ -367,52 +345,19 @@ therefore, we chose a different method of validation and evaluation.
 
 \subsection{Validation and Evaluation}
 
-\todo{make this more brief and move some detail to evaluation}
+We plan to validate correctness using the \acg{ltp} ``syscall'' test
+suite to ensure \af does not disrupt normal system call behaviour, supplemented
+by manual verification of simpler programs. The validation process is presented
+in Section~\ref{subsec:validation}.
 
-Validation of \af happens in two phases: first, we make sure that the \ac{bpf}
-program we've written is not interfering with normal system call functionality. Then,
-we test that our filtering system works - that is, \af intervenes if and only if
-a system call that is not on the whitelist is made.
-
-To make sure that \af does not interfere with normal system call functioning, we
-propose to use the \acg{ltp} system call test suite. We will run the suite on our
-test bench with and without \af enabled and make sure that the results are the
-same.
-
-Due to the problems with mocking and automating testing (expanded on in Section
-\ref{sec:evaluation}), we will favour a manual approach to ensuring that the 
-system call filtering works as expected. Writing a comprehensive test harness in requires 
-significant engineering effort: likely more than developing the solution. 
-
-Therefore, we will opt for validation via manual
-verification. During development, we will write a set of programs with a stack 
-that is easy to inspect with tools like \texttt{gdb}. We will use a small set of
-system calls and dynamically generate whitelists (as discussed in
-\ref{subsubsec:additional-tooling}). Using a restricted set of system calls allows
-us to manually add and remove them from the whitelists and observe program
-behaviour.
-
-Evaluation will also involve two phases. First, we will investigate the degree
-of privilege reduction that a developer can expect from using \af on an
-application. To do this, we define a \textit{privilege metric} (Equation~\ref
-{eqn:privilege}) and compare how privileged seccomp-filtered applications
-are vs \afss-filtered applications.
-
-We then look to evaluate how costly \af is at runtime. To do this, we will take
-a broad array of benchmarks informed by modern system call filtering literature and
-run them with \af enabled. We will also run the same set of system calls with a
-seccomp filter and with no filter, enabling comparison with a state of the art
-filtering system and with a baseline.
-
-We also intend to find use cases where \af is not suitable due to performance
-overhead. Therefore, we will use our preliminary findings to stress \af and
-speculate about application characteristics which most impact performance.
-
-To do this evaluation, we need additional tooling. As discussed, we need two
-way to generate per-library system call whitelists. We also need some way to turn
-these whitelists into a simple seccomp filter, as well as a tool to compute the
-privilege reduction seen by using \af over seccomp. The design of these tools are
-briefly discussed in Section \ref{subsubsec:additional-tooling}.
+The evaluation focuses on quantifying the security benefit
+(Section~\ref{subsec:security-eval}) by comparing privilege reduction
+against seccomp using a defined metric, alongside measuring runtime
+performance overhead (Section~\ref{subsec:perf-eval}) across a suite of
+benchmarks relative to seccomp and no filter to understand costs and
+limitations. This requires the development of supporting tools for analysis
+and whitelist generation, discussed in 
+Section~\ref{subsubsec:additional-tooling}.
 
 \subsection{Additional Tooling}\label{subsubsec:additional-tooling}
 
