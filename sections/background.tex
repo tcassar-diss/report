@@ -195,16 +195,9 @@ a null dereference (even though a loop helper now exists
 \textit{helper functions} - convenient when they exist, but sometimes mean a trivial
 task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}. 
 
-Despite being originally designed as observability tooling, \ac{bpf} is
-increasingly being used for security applications such as mitigating SPECTRE
-\cite{SPECTRE_BPF_MITIGATION} or dropping carefully-crafted packets that can
-lead to an exploit in kernel \cite{BPF_PACKET_MITIGATION}. Integration with \ac
-{lsm} has been added as part of a suite of security tools for \ac{bpf} 
-\cite{StarovoitovBPFSecurity}, which shows there is precedent for using \ac{bpf}
-as security tooling. Furthermore, seccompBPF is an extension of the existing
-seccomp which can define a custom  system call filter in terms of a \ac{bpf} program
-\cite{seccompBPF}.  Knowing this information justifies why developing 
-\af in \ac{bpf} was a sensible idea.
+As discussed in Section~\ref{subsec:bpf-in-security}, \ac{bpf} has been
+extensively used for in-kernel security solutions. This is important as it shows
+that there is precedent for using \ac{bpf} for systems security applications.
 
 \subsubsection{Structure of \iac{bpf} Program}
 

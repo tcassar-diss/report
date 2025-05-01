@@ -1,11 +1,11 @@
 FLAGS=-shell-escape -pdf
-
+ENV = LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 
 report:
-	latexmk $(FLAGS) main.tex
+	$(ENV) latexmk $(FLAGS) main.tex
 
 interactive:
-	latexmk $(FLAGS) -pvc main.tex
+	$(ENV) latexmk $(FLAGS) -pvc main.tex
 
 clean:
 	latexmk -C

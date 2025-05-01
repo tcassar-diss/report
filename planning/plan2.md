@@ -102,7 +102,6 @@ TODO: replan on rewrite!
 
 ### Bridge to design
 
-- We‚Äôve now seen why syscall filtering is necessary, how it‚Äôs currently done, and where existing solutions fall short.
 - These limitations directly informed the design goals of `addrfilter`.
 - The next section explains how these challenges were addressed through a focused, minimalistic, and precise design.
 
