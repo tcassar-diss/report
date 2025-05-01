@@ -575,11 +575,199 @@ industry-standard filtering tooling.
 
 Each experiment was repeated three times and, as was the case for our Security
 Analysis, all raw data, analysis scripts, and plots are available at the
-repository linked in Appendix~\ref{apx:eval-artefacts}.
+repository linked in Appendix~\ref{apx:eval-artefacts}).
 
 Each benchmark that we used is comprised of a set of microbenchmarks. In
 \textcite{HeiserBenchmarkingCrimes}, Heiser, a respected researcher in the
-\acp{os} community, argues that there is no good reason to report an arbitrary
+\ac{os} community, argues that there is no good reason to report an arbitrary
 subset of benchmark results. He goes further, and argues that this is not good
-academic practice and mentions that he often rejects papers
+academic practice and mentions that he often rejects papers for committing this
+``benchmarking crime''. 
+
+Therefore, we've chosen to plot our figures with all benchmarking results
+present, but only highlighting specific metrics measured in the benchmark. We
+also only present our comparisons between \af and seccomp in cases where \af
+incurs significant runtime overhead. The exception here is how in the \ac{npb}
+benchmark results, where we report our comparison with the baseline. Our
+reasoning for doing so is explained in Section~\todo{explain why we report diffs
+with baseline for npb}.
+
+This does make our results less clear to interpret than the Privilege Reduction
+results in Table~\ref{tab:pr-results}, but we provide an explanation of all
+results as they are presented. Some benchmarks also have many associated tests
+and metrics with them (e.g. Redis), which makes highlighting everything in this
+report infeasible. Therefore, we urge the reader to look for more detail in our
+artefacts repository if they feel the need to do so.
+
+As mentioned, we've also published all of our research artefacts to commit
+to full academic transparency.
+
+\subsubsection{\texttt{fio} Slowdown}
+
+\begin{figure}[htbp]
+    \centering
+    % Subfigure 1: IOPS
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_iops.pdf}
+        \caption{IOPS comparison}
+        \label{fig:fio-iops}
+    \end{subfigure}
+    \hfill % Space between horizontal figures
+    % Subfigure 2: Latency
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_latency.pdf}
+        \caption{Average latency comparison}
+        \label{fig:fio-latency}
+    \end{subfigure}
+
+    \medskip % Vertical space between rows
+    
+    % Subfigure 3: Percentage Difference
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_percent_diff.pdf}
+        \caption{Percentage difference overhead}
+        \label{fig:fio-percdiff}
+    \end{subfigure}
+    % Add more subfigures if needed, adjust layout
+
+    \caption{Performance evaluation for the Fio benchmark, comparing no filter (Baseline), Seccomp, and \af{}.} % Main figure caption
+    \label{fig:fio-perf}
+\end{figure}
+
+% Discussion of Fio results, referencing Figure~\ref{fig:fio-perf}a, etc.
+
+
+\subsubsection{Redis Slowdown}
+
+\begin{figure}[htbp]
+    \centering
+    % Subfigure 1: RPS (Assuming one plot shows all comparisons)
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        % Choose the best RPS comparison plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/redis/scmp-plots/redis_comparison_rps.pdf} 
+        \caption{Requests Per Second (RPS)}
+        \label{fig:redis-rps}
+    \end{subfigure}
+    \hfill
+    % Subfigure 2: Latency (e.g., P99)
+     \begin{subfigure}[b]{\textwidth}
+        \centering
+        % Choose the best latency plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/redis/scmp-plots/redis_comparison_p99_latency_ms.pdf} 
+        \caption{P99 Latency (ms)}
+        \label{fig:redis-p99}
+    \end{subfigure}
+    
+    % Maybe add the percent diff plot if available and clear
+     \medskip 
+     \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/redis/scmp-plots/redis_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead}
+        \label{fig:redis-percdiff}
+    \end{subfigure}
+
+    \caption{Performance evaluation for the Redis benchmark.}
+    \label{fig:redis-perf}
+\end{figure}
+
+\subsubsection{\ac{npb} Slowdown}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.7 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_mops.pdf} 
+        \caption{\ac{npb} Millions of Operations per Second (\af vs no filter)}
+        \label{fig:npb-mops}
+    \end{subfigure}
+    \hfill
+     \begin{subfigure}[b]{0.7 \textwidth}
+        \centering
+        % Choose the best latency plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_time.pdf} 
+        \caption{\ac{npb} Time taken to run each microbenchmark (\af vs no
+        filter)}
+        \label{fig:npb-time}
+    \end{subfigure}
+     \medskip 
+     \begin{subfigure}[b]{0.7 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead}
+        \label{fig:npb-percdiff}
+    \end{subfigure}
+
+    \caption{Performance evaluation for the \ac{npb} benchmark suite.}
+    \label{fig:npb-perf}
+\end{figure}
+
+\subsubsection{Postgres Slowdown}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_tps.pdf} 
+        \caption{Postgres: Comparison of transactions per second with \af
+        and seccomp}
+        \label{fig:pgs-txs}
+    \end{subfigure}
+    \hfill
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        % Choose the best latency plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_latency.pdf} 
+        \caption{Postgres: Comparison of average latency with \af versus
+        seccomp}
+        \label{fig:pgs-time}
+    \end{subfigure}
+     \medskip 
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead between \af and seccomp}
+        \label{fig:pgs-percdiff}
+    \end{subfigure}
+
+    \caption{Performance evaluation for the Postgres benchmark.}
+    \label{fig:pgs-perf}
+\end{figure}
+
+\subsubsection{Nginx Slowdown}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.9 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_requests_per_second.pdf} 
+        \caption{Nginx: comparison of transfers per second between \af and
+        seccomp.}
+        \label{fig:nginx-rps}
+    \end{subfigure}
+    \hfill
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        % Choose the best latency plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_latency.pdf} 
+        \caption{Nginx: Comparison of average latency with \af versus
+        seccomp}
+        \label{fig:nginx-time}
+    \end{subfigure}
+     \medskip 
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead between \af and seccomp}
+        \label{fig:nginx-percdiff}
+    \end{subfigure}
+
+    \caption{Performance evaluation for the Nginx benchmark.}
+    \label{fig:nginx-perf}
+\end{figure}
+
 
