@@ -566,6 +566,13 @@ incurs. To do these, we ran our suite of benchmarks under the same
 conditions as in Section~\ref{subsec:benchmark-selection}, but this time we
 recorded the benchmark results. 
 
+It is worth noting that due to \af's complexity, we expect to see some slowdown.
+The seccomp filter that we installed is as minimal as possible, just comparing
+the syscall number to a pre-defined allow list. Therefore, these benchmarks show
+a best-case scenario for seccomp. On every system call, \af must unwind the
+stack and walk the \ac{vma} red-black tree in the kernel. Therefore, we expect
+to see some level of performance degradation in these benchmark results.
+
 We conducted three experiments with each benchmark: in one experiment, no
 application had a system call filter attached. One experiment was conducted with
 a seccomp filter attached and, finally, we attached \af for our final
@@ -588,9 +595,9 @@ Therefore, we've chosen to plot our figures with all benchmarking results
 present, but only highlighting specific metrics measured in the benchmark. We
 also only present our comparisons between \af and seccomp in cases where \af
 incurs significant runtime overhead. The exception here is how in the \ac{npb}
-benchmark results, where we report our comparison with the baseline. Our
-reasoning for doing so is explained in Section~\todo{explain why we report diffs
-with baseline for npb}.
+and \texttt{fio} benchmark results, where we report our comparison with the
+baseline. Our reasoning for doing so is explained in 
+Section~\ref{subsubsec:fio-slowdown}. 
 
 This does make our results less clear to interpret than the Privilege Reduction
 results in Table~\ref{tab:pr-results}, but we provide an explanation of all
@@ -599,48 +606,31 @@ and metrics with them (e.g. Redis), which makes highlighting everything in this
 report infeasible. Therefore, we urge the reader to look for more detail in our
 artefacts repository if they feel the need to do so.
 
-As mentioned, we've also published all of our research artefacts to commit
-to full academic transparency.
+All plots have associated error bars (except percentage difference plots, which
+are calculated with the mean average of the three runs). Error bars are
+calculated using the standard error of the sample mean, 
+$\frac{\sigma}{\sqrt n}$.
 
-\subsubsection{\texttt{fio} Slowdown}
+\subsubsection{Redis Slowdown}\label{subsubsec:redis-slowdown}
 
-\begin{figure}[htbp]
-    \centering
-    % Subfigure 1: IOPS
-    \begin{subfigure}[b]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_iops.pdf}
-        \caption{IOPS comparison}
-        \label{fig:fio-iops}
-    \end{subfigure}
-    \hfill % Space between horizontal figures
-    % Subfigure 2: Latency
-    \begin{subfigure}[b]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_latency.pdf}
-        \caption{Average latency comparison}
-        \label{fig:fio-latency}
-    \end{subfigure}
+Figure~\ref{fig:redis-perf} indicates that \af incurs a performance cost when
+run on Redis. Subfigure~\ref{fig:redis-rps} shows a significant reduction in
+requests per second across all tests in the \texttt{redis-benchmark} suite
+except the \texttt{LRANGE\_*} suite of tests. The median percentage slowdown in
+throughput was 8.43\% in the \texttt{HSET} test.
 
-    \medskip % Vertical space between rows
-    
-    % Subfigure 3: Percentage Difference
-    \begin{subfigure}[b]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_percent_diff.pdf}
-        \caption{Percentage difference overhead}
-        \label{fig:fio-percdiff}
-    \end{subfigure}
-    % Add more subfigures if needed, adjust layout
+We observed no significant difference in the 99th percentile response
+latency in all test cases except the \texttt{*ADD} tests 
+(Subfigure~\ref{fig:redis-p99}). We observe a spike in the \texttt{LRANGE\_600}
+test case, but also see a very large error bar which overlaps with that of
+seccomp's measured latency. Therefore, we do not conclude these measurements to
+be significantly different.
 
-    \caption{Performance evaluation for the Fio benchmark, comparing no filter (Baseline), Seccomp, and \af{}.} % Main figure caption
-    \label{fig:fio-perf}
-\end{figure}
-
-% Discussion of Fio results, referencing Figure~\ref{fig:fio-perf}a, etc.
-
-
-\subsubsection{Redis Slowdown}
+Subfigure~\ref{fig:redis-perf} shows that every test case showed increased
+average latency and decreased throughput when using \af instead of seccomp.
+However, \textbf{percentage differences are almost always within $\pm 10\%$}.
+This shows a modest slowdown and, when contextualised with an almost 56\%
+privilege reduction, makes \af a compelling solution.
 
 \begin{figure}[htbp]
     \centering
@@ -664,7 +654,7 @@ to full academic transparency.
     
     % Maybe add the percent diff plot if available and clear
      \medskip 
-     \begin{subfigure}[b]{\textwidth}
+     \begin{subfigure}[b]{1.2\textwidth}
         \centering
         \includegraphics[width=\textwidth]{./evaluation-artefacts/results/redis/scmp-plots/redis_comparison_percent_diff.pdf} % Check what this shows
         \caption{Percentage difference overhead}
@@ -675,38 +665,125 @@ to full academic transparency.
     \label{fig:redis-perf}
 \end{figure}
 
-\subsubsection{\ac{npb} Slowdown}
+\subsubsection{Nginx Slowdown}\label{subsubsec:nginx-slowdown}
+
+We visualise the performance cost of \af on Nginx in
+Figure~\ref{fig:nginx-perf}. We see a (staistically significant) 25.1\%
+reduction in throughput and a 36.1\% increase in average latency, shown in
+Subfigure~\ref{fig:nginx-percdiff}. This is a more significant slowdown than
+we saw with Redis. Identifying the exact cause of the slowdown is reserved
+for future work, as it would involve profiling, trying different test
+parameters, and more. 
+
+One key difference in the way the tests were run was the concurrency level used
+in Nginx: we simulated 200 client connections using four threads as noted in
+Section~\ref{subsubsec:nginx-just}. It could be that this high level of
+concurrency stressed the operating system more (as Nginx worker threads may need
+to be descheduled for \ac{os} upkeep) so than in Redis's case which could
+explain the increased latency and reduced throughput.
+
+Nginx exhibited a privilege reduction of 25\% in Table~\ref{tab:pr-results}: as
+such, Nginx may not benefit so much from \af, however as with all benchmark
+results, this will depend on use case.
 
 \begin{figure}[htbp]
     \centering
-    \begin{subfigure}[b]{0.7 \textwidth}
+    \begin{subfigure}[b]{0.75 \textwidth}
         \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_mops.pdf} 
-        \caption{\ac{npb} Millions of Operations per Second (\af vs no filter)}
-        \label{fig:npb-mops}
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_requests_per_second.pdf} 
+        \caption{Nginx: comparison of transfers per second between \af and
+        seccomp.}
+        \label{fig:nginx-rps}
     \end{subfigure}
     \hfill
-     \begin{subfigure}[b]{0.7 \textwidth}
+     \begin{subfigure}[b]{0.45 \textwidth}
         \centering
         % Choose the best latency plot, e.g.:
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_time.pdf} 
-        \caption{\ac{npb} Time taken to run each microbenchmark (\af vs no
-        filter)}
-        \label{fig:npb-time}
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_latency.pdf} 
+        \caption{Nginx: Comparison of average latency with \af versus
+        seccomp}
+        \label{fig:nginx-time}
     \end{subfigure}
      \medskip 
-     \begin{subfigure}[b]{0.7 \textwidth}
+     \begin{subfigure}[b]{0.45 \textwidth}
         \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_percent_diff.pdf} % Check what this shows
-        \caption{Percentage difference overhead}
-        \label{fig:npb-percdiff}
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead between \af and seccomp}
+        \label{fig:nginx-percdiff}
     \end{subfigure}
 
-    \caption{Performance evaluation for the \ac{npb} benchmark suite.}
-    \label{fig:npb-perf}
+    \caption{Performance evaluation for the Nginx benchmark.}
+    \label{fig:nginx-perf}
 \end{figure}
 
-\subsubsection{Postgres Slowdown}
+\subsubsection{\texttt{fio} Slowdown}\label{subsubsec:fio-slowdown}
+
+We've chosen to report our \texttt{fio} and \ac{npb} benchmark results directly
+compared to baseline as opposed to with seccomp. The reason for this is that \af
+sees \textbf{no significant slowdown, in any metric}, across the two sets of
+benchmarks. 
+
+\texttt{fio}'s benchmark results are visualised in Figure~\ref{fig:fio-perf}.
+We've omitted the percentage difference plots as we saw a 0.0\%, 0.0\%, 0.0\%, and
+(statistically insignificant) +2.7\% difference in IOPS throughput, average,
+P99, and P99.99 latencies respectively. 
+
+We speculate that \texttt{fio}'s performance was almost completely
+unaffected by \af likely because we used a block size of 1MB when
+configuring \texttt{fio}. Using very large block sizes reduces the number of
+system calls made during the writing. Since \af incurs overhead on each
+system call, making few system calls implies low overhead. Another reason
+may be that \texttt{fio} is bottlenecked by \ac{io} instead of \ac{cpu} or
+the \ac{os}. Therefore, making system calls slower doesn't change performance
+numbers a lot (as a percentage), because we are not affecting the bottleneck.
+
+This indicates that \af will likely be well suited to protect applications with
+a lot of \ac{io} activity.
+
+\begin{figure}[htbp]
+    \centering
+    % Subfigure 1: IOPS
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_iops.pdf}
+        \caption{IOPS comparison}
+        \label{fig:fio-iops}
+    \end{subfigure}
+    \hfill % Space between horizontal figures
+    % Subfigure 2: Latency
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/fio/plots/fio_comparison_latency.pdf}
+        \caption{Average latency comparison}
+        \label{fig:fio-latency}
+    \end{subfigure}
+
+    \medskip % Vertical space between rows
+    
+    \caption{Performance evaluation for the \texttt{fio} benchmark, comparing no
+    filter with \af{}.} % Main figure caption
+    \label{fig:fio-perf}
+\end{figure}
+
+\subsubsection{Postgres Slowdown}\label{subsubsec:postgres-slowdown}
+
+Postgres shows slowdown (Figure~\ref{fig:pgs-perf}) somewhere inbetween that
+of Redis and Nginx. \af incurs a 16\% reduction in transaction throughput, and
+a 19\% increase in average latency. Postgres exhibited similar privilege
+reduction to Nginx, around 25\%. 
+
+The intermediate performance overhead observed for Postgres when filtered
+by \af is likely primarily to two things. Firstly, its inherently  mixed
+workload, combining network communication, \ac{cpu} processing, and frequent
+disk \ac{io}, results in a moderate overall system call frequency. 
+
+Secondly, we hypothesize that the frequent writes (as part of Postgres's
+Write-Ahead Logging) may increase system call frequency and therefore slowdown
+with \af enabled. \texttt{fio} - a benchmark which is focused on \ac{io} -
+showed no slowdown (Section~\ref{subsubsec:fio-slowdown}). The key difference in
+Postgres's case is that unlike the large block asynchronous writes
+configured in our \texttt{fio} benchmark, this frequent synchronous \ac{io}
+pattern introduces more frequent system calls, and therefore increased overhead.
 
 \begin{figure}[htbp]
     \centering
@@ -738,36 +815,56 @@ to full academic transparency.
     \label{fig:pgs-perf}
 \end{figure}
 
-\subsubsection{Nginx Slowdown}
+
+\subsubsection{\ac{npb} Slowdown}\label{subsubsec:npb-slowdown}
+
+As mentioned in Section~\ref{subsubsec:fio-slowdown}, we present the results
+from the \ac{npb} benchmark suite as a comparison between \af and no filtering
+solution, as we see no significant difference between the baseline and \af (see
+Figure~\ref{fig:npb-perf}).
+
+The reasons are likely different in \ac{npb} than in \texttt{fio}. \ac{npb}
+spends an overwhelming amount of time doing arithmetic calculations \textit{in
+user space} - therefore, it is not reliant on system call related behaviour.
+Calls will be made for things like thread synchronisation and memory 
+operations, (e.g.\texttt{futex()},{}\texttt{mmap()}, etc\dots). This likely
+leads to a low system call frequency, and therefore, no significant overhead.
 
 \begin{figure}[htbp]
     \centering
-    \begin{subfigure}[b]{0.9 \textwidth}
+    \begin{subfigure}[b]{0.7 \textwidth}
         \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_requests_per_second.pdf} 
-        \caption{Nginx: comparison of transfers per second between \af and
-        seccomp.}
-        \label{fig:nginx-rps}
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_mops.pdf} 
+        \caption{\ac{npb} Millions of Operations per Second (\af vs no filter)}
+        \label{fig:npb-mops}
     \end{subfigure}
     \hfill
-     \begin{subfigure}[b]{0.45 \textwidth}
+     \begin{subfigure}[b]{0.7 \textwidth}
         \centering
         % Choose the best latency plot, e.g.:
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_latency.pdf} 
-        \caption{Nginx: Comparison of average latency with \af versus
-        seccomp}
-        \label{fig:nginx-time}
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_time.pdf} 
+        \caption{\ac{npb} Time taken to run each microbenchmark (\af vs no
+        filter)}
+        \label{fig:npb-time}
     \end{subfigure}
      \medskip 
-     \begin{subfigure}[b]{0.45 \textwidth}
+     \begin{subfigure}[b]{0.7 \textwidth}
         \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_percent_diff.pdf} % Check what this shows
-        \caption{Percentage difference overhead between \af and seccomp}
-        \label{fig:nginx-percdiff}
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nasa/base-plots/npb_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead}
+        \label{fig:npb-percdiff}
     \end{subfigure}
 
-    \caption{Performance evaluation for the Nginx benchmark.}
-    \label{fig:nginx-perf}
+    \caption{Performance evaluation for the \ac{npb} benchmark suite.}
+    \label{fig:npb-perf}
 \end{figure}
 
-
+This evaluation demonstrates that \af can significantly enhance
+application security by reducing privilege far beyond baseline seccomp
+configurations, achieving measured reductions between 24\% and 56\% across
+our benchmark suite using our defined metric. Our validation
+confirms the core filtering mechanism operates as intended, although further
+investigation is required to address compatibility issues highlighted by
+specific \ac{ltp} test failures. We've shown that \af is not only effective
+in securing applications, but also quantified the slowdown that users can 
+expect to see when using \af.
