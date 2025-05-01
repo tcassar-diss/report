@@ -90,7 +90,9 @@ benchmark/application can be found in
 Table~\ref{tab:benchmark_software_versions}. Collectively, these benchmarks were
 selected to stress \af across a wide system call profile: network-dominated 
 (Redis, Nginx), \ac{io}-intensive (\texttt{fio}), \ac{cpu}-intensive 
-(\ac{npb}), and complex, mixed workloads (PostgreSQL).
+(\ac{npb}), and complex, mixed workloads (PostgreSQL). Benchmarks like Redis,
+Nginx, and \texttt{fio} have also seen use in benchmarking other system call
+security solutions such as in \textcite{lerner2019gvisor}.
 
 \begin{table}[h] 
     \centering 
@@ -162,23 +164,23 @@ specific \ac{io} pattern, we can observe the runtime cost incurred by \af on
 filesystem and block device related system calls. We carefully configured
 \texttt{fio} to focus specifically on high throughput sequential write
 performance, as data ingestion/writing large files to disk are often 
-predominantly sequential write tasks.
-% TODO: Cite that writing to disk is predominantly sequential write
+predominantly sequential write tasks \cite{WRITES_ARE_SEQUENTIAL}.
 
-% TODO: cite fio docs for ramp time
-We used \texttt{fio} to write 10GB files per job (--size=10G) across 16 parallel jobs 
-(--numjobs=16).  The benchmark was time-based, running for 5 minutes 
-(--runtime=5m) after a 2-second ramp-up (--ramp\_time=2s) to ensure stable 
-measurements. We enabled Direct \ac{io} (--direct=1) to bypass the
-operating system's page cache. This ensures that write operations translate 
-directly into \texttt{write()} system calls, making the benchmark highly sensitive 
-to any overhead introduced by \af. A large block size of 1MB (--bs=1M) was 
-used as it is characteristic of sequential throughput workloads. To maximize 
-load and attempt to saturate the storage device, a high \ac{io} queue depth of 64
-was used per job (--iodepth=64, --iodepth\_batch\_submit=64,
---iodepth\_batch\_complete\_max=64). This deliberately stresses the storage 
-subsystem under heavy, parallel, direct write load, providing insight into 
-\af's performance cost under such conditions.
+We used \texttt{fio} to write 10GB files per job (--size=10G) across 16
+parallel jobs  (--numjobs=16).  The benchmark was time-based, running for 5
+minutes (--runtime=5m) after a 2-second ramp-up (--ramp\_time=2s) to ensure
+stable measurements \cite{fio-docs}. We enabled Direct \ac{io} (--direct=1) to
+bypass the operating system's page cache. This ensures that write operations
+translate directly into \texttt{write()} system calls, making the benchmark
+highly sensitive  to any overhead introduced by \af. 
+
+A large block size of 1MB (--bs =1M) was  used as it is characteristic of
+sequential throughput workloads. To maximize  load and attempt to saturate
+the storage device, a high \ac{io} queue depth of 64 was used per
+job  (--iodepth=64, --iodepth\_batch\_submit=64, --iodepth\_batch\_complete\_max
+=64). This deliberately stresses the storage subsystem under heavy, parallel,
+direct write load, providing insight into \af's performance cost under
+such conditions. 
 
 \subsubsection{PostgreSQL}\label{subsubsec:psql-just}
 
@@ -294,14 +296,13 @@ changing the process's \ac{uid} and \ac{gid}. This manual changing of \acp{uid}
 and \acp{gid} may change the results expected by the \ac{ltp} suite and be the
 cause of the breakage.
 
-%TODO: cite https://man7.org/linux/man-pages/man2/process_vm_readv.2.html
-% TODO: cite https://man7.org/linux/man-pages/man2/perf_event_open.2.html
 The \texttt{process\_vm\_readv()} and \texttt{process\_vm\_writev()} system calls 
 allow for a form of \ac{ipc} which bypass kernelspace, so it is not immediately 
-obvious why these tests fail. The same goes for the \texttt{semctl()} system call
-which is used to control semaphores and the \texttt{perf\_event\_open()}
-system call, used to set up performance monitoring: \af's design does not provide any
-clues as to why these system calls tests fail.
+obvious why these tests fail \cite{process_vm_readv}. The same goes for the 
+\texttt{semctl()} system call which is used to control semaphores and the 
+\texttt{perf\_event\_open()} system call, used to set up performance
+monitoring: \af's design does not provide any clues as to why these system
+calls tests fail \cite{perf_event_open}.
 
 The most puzzling of all are the failures in tests relying on the 
 \texttt{open()} and \texttt{openat()} system calls. Both involve file creation -
@@ -549,11 +550,14 @@ libraries, whereas applications showing more modest reductions may have
 ``dangerous'' functionality concentrated into few shared libraries.
 
 Verifying this would be possible, but would require static analysis and
-therefore significant engineering work. We acknowledge that the use of dynamic
-analysis to estimate privilege reduction is an inherent limitation of this
-evaluation, but we do not believe it invalidates our results. Our use of
-multiple analysis runs, as well as the high privilege reduction scores seen,
-indicate that \af is more secure than seccomp. 
+therefore significant engineering work. While static approaches can provide
+complete coverage, they are often complex and prone to over-approximation, 
+especially in large, dynamic applications \cite{ernst2007daikon}. We
+acknowledge that the use of dynamic analysis to estimate privilege reduction
+is an inherent limitation of this evaluation, but we do not believe it
+invalidates our results. Our use of multiple analysis runs, as well as the
+high privilege reduction scores seen, indicate that \af is more secure than
+seccomp. 
 
 \subsection{Performance Evaluation}\label{subsec:perf-eval}
 
