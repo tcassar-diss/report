@@ -1,3 +1,4 @@
+
 \section{Background}\label{sec:background}
 
 \af is a project built on a complex stack of systems concepts and technologies
@@ -11,8 +12,8 @@ Section~\ref{sec:related-works}.
 
 \subsection{Linux Processes}
 
-Processes are a key concept in both the Linux kernel and in system call
-filtering. A process can be loosely thought of as an application - more 
+Processes are a key concept in the Linux kernel and system call
+filtering. A process is effectively an application (or part of one) - more 
 concretely, it is an \textit{instance of an executing program} 
 \cite{LINUX_PROGRAMMING_INTERFACE}. \af is applied to a process and requires 
 access to the process's \ac{vma}, stack, and metadata (e.g. \ac{pid}) to 
@@ -21,11 +22,11 @@ function.
 \subsubsection{Virtual Memory}
 
 Each process accesses memory through the \textit{virtual memory} abstraction.
-In the kernel, each processes has an \texttt{mm\_struct} which contains a
+In the kernel, each process has an \texttt{mm\_struct} which contains a
 reference to several \texttt{vm\_area\_struct} structs. 
 \texttt{vm\_area\_struct} structs contain information about a contiguous
-range of memory addresses including permissions, relevant start and end
-addresses, and, crucially for \af, the file that was used to populate these
+range of memory addresses, including permissions, relevant start and end
+addresses, and, crucially for \af, the file that populated these
 memory addresses \cite{love2005linux}. These are called \textit{file backed
 memory regions} and are visualised in Figure~\ref{fig:file-backed-vma}.
 
@@ -34,79 +35,75 @@ memory regions} and are visualised in Figure~\ref{fig:file-backed-vma}.
     \includegraphics[width=0.8 \linewidth]{./diagrams/file-backed-vma.drawio.pdf} 
     \caption{A figure showing a file being loaded into a process's \ac{vma} to
     create a \textit{file backed memory region}. One vertical chunk represents
-one address range represented by a \texttt{vm\_area\_struct} struct.}
+one address range by a \texttt{vm\_area\_struct} struct.}
     \label{fig:file-backed-vma}
 \end{figure}
 
 A common example of processes with file-backed regions in their address space
 are dynamically linked executables. Dynamically linked executables contain
-multiple file backed memory regions, with different regions being associated
+multiple file-backed memory regions, with different regions associated
 with different shared libraries. Dynamically linked executables are mapped
 into a processes address space by the linker at runtime, with the
-\texttt{\_\_code\_\_} sections of each \ac{elf} binary are mapped contiguously 
-in memory \cite{DYNAMIC_LINKERS_OS}. The \ac{vma} of a process can be
-inspected from userspace either through the \texttt{pmap} command line tool, or
-by reading the contents of the \texttt{/proc/pid/maps} file (where \texttt{pid}
-is replaced by the relevant process's \ac{pid}.
+\texttt{\_\_code\_\_} sections of each \ac{elf} binary mapped contiguously 
+in memory \cite{DYNAMIC_LINKERS_OS}. One can inspect a process's \ac{vma} from
+userspace either through the \texttt{pmap} command line tool or by reading
+the contents of the \texttt{/proc/pid/maps} file (where \texttt{pid} is
+replaced by the relevant process's \ac{pid}. 
 
-This is how \af splits up applications for system call filtering: a system call
-whitelist per file backed memory region.
+\af splits up applications for system call filtering using these \ac{vma} regions: a system calls
+whitelist per file-backed memory region.
 
 \subsubsection{Stack Unwinding}
 
 A section of each process's \ac{vma} is dedicated to the stack. The stack in
 this context refers to an \acg{os} stack as opposed to the generic data
-structure. Recall that a stack is used to manage function calls within a
+structure. Recall that a stack manages function calls within a
 process, with each function call pushing a stack frame and each return popping
 said stack frame.
  
 Debugging, observability, and security tools often inspect the process stack
-while the program is running through a mechanism called \textit{stack
-unwinding} \cite{gregg2014linux, kilroy2022linker}. This involves looking at 
-each frame present in the userspace stack without popping any frames. We
+while the program runs through a mechanism called \textit{stack
+unwinding} \cite{gregg2014linux, kilroy2022linker}. Stack unwinding involves looking at 
+each frame in the userspace stack without popping any frames. We
 introduce stack unwinding here as \af relies on stack unwinding for part of
 its design: see Section~\ref{subsubsec:find_syscall}.
 
 \subsection{Linux Security Mechanisms}
 
-Processes, aside from being a convenient way for the \ac{os} to reason about
-operations, also have security mechanisms inbuilt. Some of these such as
+Aside from being a convenient way for the \ac{os} to reason about
+operations, processes also have security mechanisms inbuilt. Some of these, such as
 permission, \acp{uid}/\acp{gid}, and \ac{aslr} are relevant to \af.
 
 \subsubsection{Process Permissions}
 
-In Linux, each process is associated with \iac{uid} and one or more \acp{gid}.
-These IDs determine which privileges different processes are allowed - these
-privileges are enforced by the kernel. \af needs to be run with
+In Linux, each process has \iac{uid} and one or more \acp{gid}.
+These IDs determine which privileges different processes are allowed - the kernel enforces these
+privileges. \af needs to be run with
 \iac{uid}/\iac{gid} combination which gives the process the
 \texttt{CAP\_SYS\_ADMIN} privilege in order to mount \ac{bpf} programs,
 discussed further in Section~\ref{subsec:bgd-bpf}. However, \af needs to ensure
-that the applications it launches with it's system call filter enabled does not
-have access to this permission, as with it an attacker would be able to
+that the applications it launches with its system call filter enabled do not
+have access to this permission, as with it, an attacker would be able to
 circumvent the filter (as discussed in Section ~\ref{subsubsec:spawning-exec}).
 
-Since \af needs to spawn processes, we need to take \ac{aslr} into
-consideration. \ac{aslr} is a security feature of Linux that makes it harder for
+Since \af needs to spawn processes, we must consider \ac{aslr}. \ac{aslr} is a security feature of Linux that makes it harder for
 attackers to exploit applications with \ac{rop} \cite{ASLR_GUARD}. When
-enabled, the linker will change the addresses of the stack, heap, and file
-backed address space regions in the new process's \ac{vma}. Crucially, \ac{aslr}
+enabled, the linker will change the addresses of the stack, heap, and file-backed address space regions in the new process's \ac{vma}. Crucially, \ac{aslr}
 doesn't affect the address space of forks (as the linker is not involved in
 a \texttt{fork()} system call). This allows us to run \af with full \ac{aslr}
 enabled for our suite of benchmarks (see 
-Section~\ref{subsec:benchmark-selection}), but is something to take into
-consideration.  
+Section~\ref{subsec:benchmark-selection}), but it is worth considering.  
 
-The final built-in security feature that warrants mentioning here is the user
-space/kernel space seperation. User space is designed to run untrusted 
-applications. There is no direct access to hardware, I/O devices, or the 
-network from userspace. Kernel space, on the other hand, is a privileged 
+The final built-in security feature worth mentioning here is the separation of user
+space/kernel space. Untrusted applications run in userspace, where there is no direct access to hardware, I/O devices, or the 
+network from userspace. On the other hand, kernel space is a more privileged 
 environment than userspace. The kernel has direct access to hardware, memory, and the
-network. As such, one can do a lot of damage from kernel space including causing
+network. As such, one can do a lot of damage from kernel space, including causing
 the kernel to crash.
 
 When an application needs to perform a privileged action, such as creating a
-file, it must ask the kernel to do the action on the applications behalf. The
-application does this by issuing a system call, and is visualised in
+file, it must ask the kernel to do the action on the application's behalf. The
+application does this by issuing a system call, visualised in
 Figure~\ref{fig:syscall-flow}.
 
 \begin{figure}[h]
@@ -127,26 +124,26 @@ signs of compromise.
 
 Seccomp is a system call filter that has been part of the Linux kernel since
 2005 \cite{arcangeli_seccomp_2005}. Seccomp's goal is to restrict the set of
-system calls that a process can make, thereby reducing it's privilege and making
+system calls that a process can make, thereby reducing its privilege and making
 any attackers who may have compromised the process less able to cause damage.
 
-Despite initial skepticism and slow adoption
+Despite initial scepticism and slow adoption
 \cite{TORVALDS_ANYONE_USES_SECCOMP}, seccomp is widespread today. Android has
 used seccomp since 8.0 Oreo, Docker containers are
-created with a seccomp filter by default, and FireFox uses it as a means of
+created with a seccomp filter by default, and Firefox uses it as a means of
 sandboxing content processes \cite{android_seccomp_oreo, docker_seccomp,
 firefox_seccomp}.
 
 Seccomp is invoked with the \texttt{prctl} system call in one of two modes: strict
 or filter. In strict mode, only three system calls are allowed: \texttt{read},
 \texttt{write}, and \texttt{exit} \cite{MAN_PAGES_SECCOMP}. This is typically
-too strict to be helpful and so the filter mode also exists.
+too strict to be helpful, so the filter mode also exists.
 
 In filter mode, a \ac{bpf} program (plus some metadata) is supplied in the arguments to
-\texttt{prctl}. When a system call occurs, this program is run and its logic
+\texttt{prctl}. This program is run when a system call occurs, and its logic
 determines how to handle the system call. 
 
-Seccomp's man pages entry suggest that it may be able to provide fine-grained
+Seccomp's man pages entry suggests that it may be able to provide fine-grained
 system call filtering based on the process's address space, which is what we
 are proposing for this project. It's entry states that seccompBPF programs have
 access to the ``\texttt{instruction\_pointer} \textit{field}'', which
@@ -158,12 +155,12 @@ for \af.
 
 As we argue in Section~\ref{subsubsec:find_syscall}, the instruction pointer
 address alone is insufficient for the fine-grained filtering mechanism we
-propose here. Thus, a novel approach built on different technology is needed
+propose here. Thus, a novel approach built on a different technology is needed
 to implement \af. 
 
 \subsection{The (Extended) Berkley Packet Filter}\label{subsec:bgd-bpf}
 
-We decided to use \ac{bpf} in our implementation of \af. \ac{bpf} is a technology
+We decided to use \ac{bpf} to implement \af. \ac{bpf} is a technology
 that allows developers to write custom programs which can be \textit{dynamically
 loaded} into the kernel to alter the kernel's behaviour \cite{LEARNING_EBPF}.
 
@@ -173,14 +170,14 @@ requires linking to the kernel \cite{UNDERSTANDING_LINUX_KERNEL}. In contrast,
 as a system call being triggered. \ac{bpf} also provides a \textit{verifier} which
 ensures the  loaded program is safe \cite{LEARNING_EBPF}. This makes it
 impossible to cause a kernel panic (or any similarly catastrophic event) when
-writing \ac{bpf} although real-world exploits targeting the verifier have
+writing \ac{bpf}, although real-world exploits targeting the verifier have
 been seen \cite{BPF_VERIFIER_EXPLOIT}.  
 
 \subsubsection{Context and Use Cases}
 
 As such, \ac{bpf} is used a lot in industry for observability tooling: being able to
 dynamically load \ac{bpf} programs allows developers to instrument running processes
-without changing any configuration files or using sidecar containers \cite{SIDECAR}.
+without changing configuration files or using sidecar containers \cite{SIDECAR}.
 \ac{bpf} is also often used in networking and firewalls 
 \cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can be loaded 
 onto the \ac{xdp} to inspect packets at the 
@@ -197,22 +194,20 @@ task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}.
 
 As discussed in Section~\ref{subsec:bpf-in-security}, \ac{bpf} has been
 extensively used for in-kernel security solutions. This is important as it shows
-that there is precedent for using \ac{bpf} for systems security applications.
+precedent for using \ac{bpf} for systems security applications.
 
 \subsubsection{Structure of \iac{bpf} Program}
 
 \Iac{bpf} program operates by attaching to specific kernel instrumentation
 points (like tracepoints or function entries); it runs automatically
-whenever kernel execution hits that point. Persistent state or configuration
-is stored in \ac{bpf} maps, versatile key-value stores often accessible from both
-the kernel program and user space applications. For efficiently sending
-event data from the kernel to user space, mechanisms like ringbuffers or
-perf buffers are used, allowing near real-time communication.
+whenever kernel execution hits that point. \ac{bpf} maps --versatile key-value stores often accessible from both
+the kernel program and user space applications -- store persistent state or configuration. Mechanisms like ringbuffers or perf buffers efficiently send
+event data from the kernel to user space, allowing near real-time communication.
 
-\af makes use of all of these \ac{bpf} concepts except perf buffers.
-Section~\ref{sec:implementation} goes into further detail about specifics,
+\af uses all of these \ac{bpf} concepts except perf buffers.
+Section~\ref{sec:implementation} details specifics,
 discussing which instrumentation point we attached our program to and why. We
-also discuss which maps are used and where/why we use ringbuffers.
+also discuss which maps and ringbuffers we use and why.
 
 \subsection{Software Compartmentalisation}
 
@@ -230,10 +225,11 @@ Implementing this form of compartmentalisation requires deep kernel
 integration, making \ac{bpf}, with the capabilities discussed previously, a 
 suitable tool for the task.  
 
-Compartmentalisation has proven useful in containing memory safety issues
+Compartmentalisation has proven helpful in containing memory safety issues
 \cite{CONFFUZZ}, sandboxing untrusted third parties \cite{ANDROID_SOK} or
 unsafe parts of languages \cite{MPK} (e.g. \texttt{unsafe} in Rust 
 \cite{rustbook_unsafe}). Compartmentalisation is also an application of the
 principle of least privilege to software \cite{PRIVMAN}. As discussed in 
 Section~\ref{subsec:objs-assumpions-tm}, we also assume a compartmentalisation
-mechanism is in place on our host system.
+mechanism exists on our host system.
+
