@@ -1,5 +1,11 @@
 \section{Evaluation}\label{sec:evaluation}
 
+\iffalse
+    Gavin wants to see:
+    - What is the max privilege score that an application can have?
+    - Diagram about system call distribution
+\fi
+
 In this section we look to show that \af is able to significantly reduce the
 privilege of the applications that it protects -- often more so than seccomp. 
 We quantify the additional runtime cost that developers can expect from using 
@@ -227,12 +233,14 @@ suite did not take more than three minutes.
 % PostgreSQL version 16.8
 % version 3.4.3
 
-\subsection{Validation}
+\subsection{Validation}\label{subsec:validation}
 
 To validate that \af works correctly, we used a combination of strategies. We 
 extensively used manual testing on simple \textit{"Hello, World"} style 
 applications during development to ensure that the filtered application was 
-killed when it made a non-whitelisted system call. We then wrote a collection of 
+killed when it made a non-whitelisted system call. 
+
+We then wrote a collection of 
 shared libraries (Listings \ref{lst:getpid-c},~\ref{lst:printf-c}) containing 
 functions that wrapped \ac{libc} function, and rewrote our 
 \textit{"Hello, World"} style application (provided in Appendix~\ref{sec:linkage})
@@ -296,6 +304,11 @@ changing the process's \ac{uid} and \ac{gid}. This manual changing of \acp{uid}
 and \acp{gid} may change the results expected by the \ac{ltp} suite and be the
 cause of the breakage.
 
+\todo{reduce failure problem; talk about setuid}
+
+This is an implementation detail artefact, and not a problem with the core
+filtering solution. A \texttt{setuid} program would be able 
+
 The \texttt{process\_vm\_readv()} and \texttt{process\_vm\_writev()} system calls 
 allow for a form of \ac{ipc} which bypass kernelspace, so it is not immediately 
 obvious why these tests fail \cite{process_vm_readv}. The same goes for the 
@@ -313,7 +326,7 @@ a user/group unexpected by the \ac{ltp} test suite, but this is speculation.
 More work is needed to identify the cause of these failures.
 
 These 12 \ac{ltp} failures notwithstanding, we believe that the core filtering
-mechanism functions as intended. Now, we move on to \textbf{security analysis},
+mechanism functions as intended. Now, we move on to security analysis,
 where we quantify the degree of privilege reduction provided by \af.
 
 \subsection{Security Evaluation}\label{subsec:security-eval}
@@ -325,17 +338,17 @@ a function of the set of system calls a compartment in an application can make.
 Recall that \af provides fine-grained filtering based on file-backed
 regions (shared libraries) within the process's \ac{vma}. \af associates a 
 system call whitelist with each of these regions in accordance with our threat
-model presented in Section~\ref{subsec:threat-model}. For the purpose of this
+model presented in Section~\ref{subsec:objs-assumpions-tm}. For the purpose of this
 evaluation, we will refer to these regions as compartments. We chose to
 define our metric in terms of these compartments, as this aligns with how \af
 views the world. To calculate the privilege of a seccomp-filtered application,
 we define the application as being made of a single compartment. 
 
 This avoids the need to define two metrics, or ``special case'' 
-seccomp-filtered applications.  Using this metric, and our custom evaluation
+seccomp-filtered applications.  Using this metric (\ref{eqn:privilege}), and our custom evaluation
 tool \texttt{syso}, we show that \af provides significant privilege
-reduction compared to seccomp  for all applications and benchmarks we tested,
-therefore fulfilling its requirement to reduce privilege\todo{reference exact req.}.
+reduction compared to seccomp for all applications and benchmarks we tested,
+therefore fulfilling its requirement to reduce privilege.
  
 \subsubsection{Quantifying Privilege of
 Compartments}\label{subsubsec:eval-quant-privilege}
@@ -401,7 +414,7 @@ Equation~\ref{eqn:privilege}).
 In the case of a multi-compartment application (practically all \af-protected
 applications), with compartments $C_1, \dots, C_n$ and respective
 privilege scores $P_{C_1}, \dots, P_{C_n}$, we define the privilege of the
-application $P_A$ as the score of the \textbf{most privileged compartment}: 
+application $P_A$ as the score of the \textit{most privileged compartment}: 
 
 \begin{equation} \label{eqn:app-privilege} 
     P_A = \max_{j=1,\dots,n} \{ P_{C_j} \} 
@@ -417,7 +430,9 @@ compartment. Therefore, the application's overall privilege level is
 dictated by its weakest (most privileged) part. We use the worst case to
 inform the application's privilege score as we have no way of knowing how
 likely a given compartment is to be compromised, so any attempts at
-estimating an average score would be invalid. Therefore, the privilege
+estimating an average score would be invalid. 
+
+Therefore, the privilege
 reduction estimates derived using this metric are also worst case estimates;
 \af will likely demonstrate greater privilege reduction in real-world
 scenarios than the numbers reported here indicate. 
@@ -426,7 +441,19 @@ This allows us to assign specific application privilege scores based on the
 filtering mechanism applied. Let $P_{A, \text{\af}}$ be the application
 privilege score when filtered with \af (the ``\af score''), and 
 $P_{A, \text{seccomp}}$ be the score when filtered with seccomp (the ``
-seccomp score''). 
+seccomp score'').
+
+For clarity, we provide a visualised example in
+Figure~\ref{fig:pr}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{./diagrams/pr-syscall-distribution.drawio.pdf}
+    \caption{A diagram showing system calls made by an application, and how
+    filtering with seccomp versus \af changes privilege levels}.
+    \label{fig:pr}
+\end{figure}
+
 
 It is worth noting that $P_{A, \text{seccomp}} \ge P_{A, \af}$. This
 relationship holds because the set of system calls permitted by the \af 
@@ -612,6 +639,107 @@ are calculated with the mean average of the three runs). Error bars are
 calculated using the standard error of the sample mean, 
 $\frac{\sigma}{\sqrt n}$.
 
+\subsubsection{Nginx Slowdown}\label{subsubsec:nginx-slowdown}
+
+We visualise the performance cost of \af on Nginx in
+Figure~\ref{fig:nginx-perf}. We see a (statistically significant) 25.1\%
+reduction in throughput and a 36.1\% increase in average latency, shown in
+Figure~\ref{fig:nginx-percdiff}. This is a more significant slowdown than
+we saw with Redis. Identifying the exact cause of the slowdown is reserved
+for future work, as it would involve profiling, trying different test
+parameters, and more. 
+
+One key difference in the way the tests were run was the concurrency level used
+in Nginx: we simulated 200 client connections using four threads as noted in
+Section~\ref{subsubsec:nginx-just}. It could be that this high level of
+concurrency stressed the operating system more (as Nginx worker threads may need
+to be de-scheduled for \ac{os} upkeep) so than in Redis's case which could
+explain the increased latency and reduced throughput.
+
+Nginx exhibited a privilege reduction of 25\% in Table~\ref{tab:pr-results}: as
+such, Nginx may not benefit so much from \af, however as with all benchmark
+results, this will depend on use case.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.75 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_requests_per_second.pdf} 
+        \caption{Nginx: comparison of transfers per second between \af and
+        seccomp.}
+        \label{fig:nginx-rps}
+    \end{subfigure}
+    \hfill
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        % Choose the best latency plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_latency.pdf} 
+        \caption{Nginx: Comparison of average latency with \af versus
+        seccomp}
+        \label{fig:nginx-time}
+    \end{subfigure}
+     \medskip 
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead between \af and seccomp}
+        \label{fig:nginx-percdiff}
+    \end{subfigure}
+
+    \caption{Performance evaluation for the Nginx benchmark.}
+    \label{fig:nginx-perf}
+\end{figure}
+
+\subsubsection{Postgres Slowdown}\label{subsubsec:postgres-slowdown}
+
+Postgres shows slowdown (Figure~\ref{fig:pgs-perf}) somewhere in between that
+of Redis and Nginx. \af incurs a 16\% reduction in transaction throughput, and
+a 19\% increase in average latency. Postgres exhibited similar privilege
+reduction to Nginx, around 25\%. 
+
+The intermediate performance overhead observed for Postgres when filtered
+by \af is likely primarily to two things. Firstly, its inherently  mixed
+workload, combining network communication, \ac{cpu} processing, and frequent
+disk \ac{io}, results in a moderate overall system call frequency. 
+
+Secondly, we hypothesize that the frequent writes (as part of Postgres's
+Write-Ahead Logging) may increase system call frequency and therefore slowdown
+with \af enabled. \texttt{fio} - a benchmark which is focused on \ac{io} -
+showed no slowdown (Section~\ref{subsubsec:fio-slowdown}). The key difference in
+Postgres's case is that unlike the large block asynchronous writes
+configured in our \texttt{fio} benchmark, this frequent synchronous \ac{io}
+pattern introduces more frequent system calls, and therefore increased overhead.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_tps.pdf} 
+        \caption{Postgres: Comparison of transactions per second with \af
+        and seccomp}
+        \label{fig:pgs-txs}
+    \end{subfigure}
+    \hfill
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        % Choose the best latency plot, e.g.:
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_latency.pdf} 
+        \caption{Postgres: Comparison of average latency with \af versus
+        seccomp}
+        \label{fig:pgs-time}
+    \end{subfigure}
+     \medskip 
+     \begin{subfigure}[b]{0.45 \textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_percent_diff.pdf} % Check what this shows
+        \caption{Percentage difference overhead between \af and seccomp}
+        \label{fig:pgs-percdiff}
+    \end{subfigure}
+
+    \caption{Performance evaluation for the Postgres benchmark.}
+    \label{fig:pgs-perf}
+\end{figure}
+
 \subsubsection{Redis Slowdown}\label{subsubsec:redis-slowdown}
 
 Figure~\ref{fig:redis-perf} indicates that \af incurs a performance cost when
@@ -666,57 +794,6 @@ privilege reduction, makes \af a compelling solution.
     \label{fig:redis-perf}
 \end{figure}
 
-\subsubsection{Nginx Slowdown}\label{subsubsec:nginx-slowdown}
-
-We visualise the performance cost of \af on Nginx in
-Figure~\ref{fig:nginx-perf}. We see a (statistically significant) 25.1\%
-reduction in throughput and a 36.1\% increase in average latency, shown in
-Figure~\ref{fig:nginx-percdiff}. This is a more significant slowdown than
-we saw with Redis. Identifying the exact cause of the slowdown is reserved
-for future work, as it would involve profiling, trying different test
-parameters, and more. 
-
-One key difference in the way the tests were run was the concurrency level used
-in Nginx: we simulated 200 client connections using four threads as noted in
-Section~\ref{subsubsec:nginx-just}. It could be that this high level of
-concurrency stressed the operating system more (as Nginx worker threads may need
-to be de-scheduled for \ac{os} upkeep) so than in Redis's case which could
-explain the increased latency and reduced throughput.
-
-Nginx exhibited a privilege reduction of 25\% in Table~\ref{tab:pr-results}: as
-such, Nginx may not benefit so much from \af, however as with all benchmark
-results, this will depend on use case.
-
-\begin{figure}[htbp]
-    \centering
-    \begin{subfigure}[b]{0.75 \textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_requests_per_second.pdf} 
-        \caption{Nginx: comparison of transfers per second between \af and
-        seccomp.}
-        \label{fig:nginx-rps}
-    \end{subfigure}
-    \hfill
-     \begin{subfigure}[b]{0.45 \textwidth}
-        \centering
-        % Choose the best latency plot, e.g.:
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_latency.pdf} 
-        \caption{Nginx: Comparison of average latency with \af versus
-        seccomp}
-        \label{fig:nginx-time}
-    \end{subfigure}
-     \medskip 
-     \begin{subfigure}[b]{0.45 \textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/nginx/plots/wrk_comparison_percent_diff.pdf} % Check what this shows
-        \caption{Percentage difference overhead between \af and seccomp}
-        \label{fig:nginx-percdiff}
-    \end{subfigure}
-
-    \caption{Performance evaluation for the Nginx benchmark.}
-    \label{fig:nginx-perf}
-\end{figure}
-
 \subsubsection{\texttt{fio} Slowdown}\label{subsubsec:fio-slowdown}
 
 We've chosen to report our \texttt{fio} and \ac{npb} benchmark results directly
@@ -766,55 +843,6 @@ a lot of \ac{io} activity.
     \label{fig:fio-perf}
 \end{figure}
 
-\subsubsection{Postgres Slowdown}\label{subsubsec:postgres-slowdown}
-
-Postgres shows slowdown (Figure~\ref{fig:pgs-perf}) somewhere in between that
-of Redis and Nginx. \af incurs a 16\% reduction in transaction throughput, and
-a 19\% increase in average latency. Postgres exhibited similar privilege
-reduction to Nginx, around 25\%. 
-
-The intermediate performance overhead observed for Postgres when filtered
-by \af is likely primarily to two things. Firstly, its inherently  mixed
-workload, combining network communication, \ac{cpu} processing, and frequent
-disk \ac{io}, results in a moderate overall system call frequency. 
-
-Secondly, we hypothesize that the frequent writes (as part of Postgres's
-Write-Ahead Logging) may increase system call frequency and therefore slowdown
-with \af enabled. \texttt{fio} - a benchmark which is focused on \ac{io} -
-showed no slowdown (Section~\ref{subsubsec:fio-slowdown}). The key difference in
-Postgres's case is that unlike the large block asynchronous writes
-configured in our \texttt{fio} benchmark, this frequent synchronous \ac{io}
-pattern introduces more frequent system calls, and therefore increased overhead.
-
-\begin{figure}[htbp]
-    \centering
-    \begin{subfigure}[b]{0.45 \textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_tps.pdf} 
-        \caption{Postgres: Comparison of transactions per second with \af
-        and seccomp}
-        \label{fig:pgs-txs}
-    \end{subfigure}
-    \hfill
-     \begin{subfigure}[b]{0.45 \textwidth}
-        \centering
-        % Choose the best latency plot, e.g.:
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_latency.pdf} 
-        \caption{Postgres: Comparison of average latency with \af versus
-        seccomp}
-        \label{fig:pgs-time}
-    \end{subfigure}
-     \medskip 
-     \begin{subfigure}[b]{0.45 \textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{./evaluation-artefacts/results/postgres/plots/pgbench_comparison_percent_diff.pdf} % Check what this shows
-        \caption{Percentage difference overhead between \af and seccomp}
-        \label{fig:pgs-percdiff}
-    \end{subfigure}
-
-    \caption{Performance evaluation for the Postgres benchmark.}
-    \label{fig:pgs-perf}
-\end{figure}
 
 
 \subsubsection{\ac{npb} Slowdown}\label{subsubsec:npb-slowdown}

@@ -1,5 +1,37 @@
 \section*{Abstract}
 
+% XXX: this citation actually doesn't really work...
+%  optimus says filters are too permissive because generation is bad
+%  would make sense that static analysis of the same overestimation would affect 
+%  addrfilter less badly than seccomp (same abs, smaller percentage) but this
+%  is future work
+
+
+System call filtering is a security technique to restrict process
+privileges. It is widespread, found in container runtimes 
+\cite{docker_seccomp}, desktops \cite{chromium_sandboxing,
+firefox_seccomp}, and mobile systems \cite{android_seccomp_oreo} which
+restricts process privileges. Current
+production systems apply a single coarse-grained policy to
+an entire application, making them too permissive and therefore suboptimal
+\cite{OPTIMUS}. 
+We propose \af: a novel, fine-grained, \textit{spatial} system call filter
+written in \ac{bpf}. \af is able to filter system calls based on  where in
+the process's \ac{vma}, the system call was issued, thereby respecting the 
+\ac{polp}\cite{SALTZER_SCHROEDER}. Like this, we are able to use smaller, 
+more precise static filters based on code regions within the process's \ac{vma}.
+Security and performance evaluation of \af shows a median
+privilege
+reduction of 52.6\% compared to seccomp, and a median throughput reduction
+of 16\%, although we note that some benchmarks exhibited no significant
+slowdown. We used the \ac{ltp} system call test suite to validate our
+implementation, as well as performing manual verification on carefully
+selected examples.
+
+\af demonstrates that spatial system call filtering offers a promising
+approach to significantly enhancing security beyond traditional methods, albeit
+with a performance trade-off that varies by workload.
+
 \clearpage
 
 \section*{Declaration}
@@ -38,8 +70,7 @@ of learning.
 I would like to thank my supervisor, Pierre Olivier, for all of his support
 throughout this project. He was always available to answer any questions, gave
 invaluable guidance, and shared relevant research with me as he stumbled across
-it in the wild. I would also like to thank Tom Heeremans \todo{remove if he
-doesn't make logo} for creating the \af logo.
+it in the wild. 
 
 \clearpage
 
@@ -53,12 +84,10 @@ doesn't make logo} for creating the \af logo.
 
 \listoffigures
 
-\todo{list of equations}
-
 \clearpage
 
 \listoftables
 
 \clearpage
 
-\listoflistings\todo{rename to code samples}
+\listoflistings

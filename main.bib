@@ -394,9 +394,7 @@
     author = {{Apache Software Foundation}},
     title = {prefork MPM --- Apache HTTP Server Version 2.4 Documentation},
     year = {2025},
-    howpublished = {\url{
-                    https://httpd.apache.org/docs/2.4/mod/prefork.html?utm_source=chatgpt.com
-                    }},
+    howpublished = {\url{ https://httpd.apache.org/docs/2.4/mod/prefork.html }},
     note = {Accessed: 24 April 2025},
 }
 
@@ -406,7 +404,7 @@
     year = {2015},
     month = jun,
     howpublished = {\url{
-                    https://blog.nginx.org/blog/inside-nginx-how-we-designed-for-performance-scale?utm_source=chatgpt.com
+                    https://blog.nginx.org/blog/inside-nginx-how-we-designed-for-performance-scale
                     }},
     note = {Accessed: 24 April 2025},
 }
@@ -416,7 +414,7 @@
     title = {dl\-map\-segments.h Source Code},
     year = {2025},
     howpublished = {\url{
-                    https://codebrowser.dev/glibc/glibc/elf/dl-map-segments.h.html?utm_source=chatgpt.com
+                    https://codebrowser.dev/glibc/glibc/elf/dl-map-segments.h.html
                     }},
     note = {Accessed: 24 April 2025},
 }
@@ -461,7 +459,7 @@
     author = {{The Linux Kernel Documentation}},
     title = {Building External Modules},
     year = {2025},
-    url = {https://docs.kernel.org/kbuild/modules.html?utm_source=chatgpt.com},
+    url = {https://docs.kernel.org/kbuild/modules.html},
     urldate = {2025-04-24},
 }
 
@@ -510,21 +508,47 @@
 }
 
 @inproceedings{SYSPART,
-author = {Rajagopalan, Vidya Lakshmi and Kleftogiorgos, Konstantinos and G\"{o}ktas, Enes and Xu, Jun and Portokalidis, Georgios},
-title = {SysPart: Automated Temporal System Call Filtering for Binaries},
-year = {2023},
-isbn = {9798400700507},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3576915.3623207},
-doi = {10.1145/3576915.3623207},
-abstract = {Restricting the system calls available to applications reduces the attack surface of the kernel and limits the functionality available to compromised applications. Recent approaches automatically identify the system calls required by programs to block unneeded ones. For servers, they even consider different phases of execution to tighten restrictions after initialization completes. However, they require access to the source code for applications and libraries, depend on users identifying when the server transitions from initialization to serving clients, or do not account for dynamically-loaded libraries. This paper introduces SYSPART, an automatic system-call filtering system designed for binary-only server programs that addresses the above limitations. Using a novel algorithm that combines static and dynamic analysis, SYSPART identifies the serving phases of all working threads of a server. Static analysis is used to compute the system calls required during the various serving phases in a sound manner, and dynamic observations are only used to complement static resolution of dynamically-loaded libraries when necessary. We evaluated SYSPART using six popular servers on x86-64 Linux to demonstrate its effectiveness in automatically identifying serving phases, generating accurate system-call filters, and mitigating attacks. Our results show that SYSPART outperforms prior binary-only approaches and performs comparably to source-code approaches.},
-booktitle = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security},
-pages = {1979Ð1993},
-numpages = {15},
-keywords = {attack-surface reduction, binary analysis, exploit mitigation, system-call filtering, temporal},
-location = {Copenhagen, Denmark},
-series = {CCS '23}
+    author = {Rajagopalan, Vidya Lakshmi and Kleftogiorgos, Konstantinos and G\"
+              {o}ktas, Enes and Xu, Jun and Portokalidis, Georgios},
+    title = {SysPart: Automated Temporal System Call Filtering for Binaries},
+    year = {2023},
+    isbn = {9798400700507},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3576915.3623207},
+    doi = {10.1145/3576915.3623207},
+    abstract = {Restricting the system calls available to applications reduces
+                the attack surface of the kernel and limits the functionality
+                available to compromised applications. Recent approaches
+                automatically identify the system calls required by programs to
+                block unneeded ones. For servers, they even consider different
+                phases of execution to tighten restrictions after initialization
+                completes. However, they require access to the source code for
+                applications and libraries, depend on users identifying when the
+                server transitions from initialization to serving clients, or do
+                not account for dynamically-loaded libraries. This paper
+                introduces SYSPART, an automatic system-call filtering system
+                designed for binary-only server programs that addresses the above
+                limitations. Using a novel algorithm that combines static and
+                dynamic analysis, SYSPART identifies the serving phases of all
+                working threads of a server. Static analysis is used to compute
+                the system calls required during the various serving phases in a
+                sound manner, and dynamic observations are only used to
+                complement static resolution of dynamically-loaded libraries when
+                necessary. We evaluated SYSPART using six popular servers on
+                x86-64 Linux to demonstrate its effectiveness in automatically
+                identifying serving phases, generating accurate system-call
+                filters, and mitigating attacks. Our results show that SYSPART
+                outperforms prior binary-only approaches and performs comparably
+                to source-code approaches.},
+    booktitle = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and
+                 Communications Security},
+    pages = {1979Ð1993},
+    numpages = {15},
+    keywords = {attack-surface reduction, binary analysis, exploit mitigation,
+                system-call filtering, temporal},
+    location = {Copenhagen, Denmark},
+    series = {CCS '23},
 }
 
 @inproceedings{SYSFILTER,
@@ -728,269 +752,387 @@ series = {CCS '23}
 }
 
 @manual{process_vm_readv,
-  title        = {process\_vm\_readv(2) Ñ Linux manual page},
-  subtitle     = {Transfer data between the address spaces of processes},
-  author       = {{Michael Kerrisk and Contributors}},
-  organization = {man7.org},
-  year         = {2025},
-  url          = {https://man7.org/linux/man-pages/man2/process_vm_readv.2.html},
-  note         = {Accessed: 2025-05-01}
+    title = {process\_vm\_readv(2) Ñ Linux manual page},
+    subtitle = {Transfer data between the address spaces of processes},
+    author = {{Michael Kerrisk and Contributors}},
+    organization = {man7.org},
+    year = {2025},
+    url = {https://man7.org/linux/man-pages/man2/process_vm_readv.2.html},
+    note = {Accessed: 2025-05-01},
 }
 
 @manual{perf_event_open,
-  title        = {perf\_event\_open(2) ¿ Linux manual page},
-  subtitle     = {Set up performance monitoring},
-  author       = {{Michael Kerrisk and Contributors}},
-  organization = {man7.org},
-  year         = {2025},
-  url          = {https://man7.org/linux/man-pages/man2/perf_event_open.2.html},
-  note         = {Accessed: 2025-05-01}
+    title = {perf\_event\_open(2) ¿ Linux manual page},
+    subtitle = {Set up performance monitoring},
+    author = {{Michael Kerrisk and Contributors}},
+    organization = {man7.org},
+    year = {2025},
+    url = {https://man7.org/linux/man-pages/man2/perf_event_open.2.html},
+    note = {Accessed: 2025-05-01},
 }
 
 @inproceedings{shacham2007rop,
-  title={The geometry of innocent flesh on the bone: Return-into-libc without function calls ()},
-  author={Shacham, Hovav},
-  booktitle={Proceedings of the 14th ACM Conference on Computer and Communications Security (CCS)},
-  pages={552--561},
-  year={2007},
-  publisher={ACM}
+    title = {The geometry of innocent flesh on the bone: Return-into-libc
+             without function calls ()},
+    author = {Shacham, Hovav},
+    booktitle = {Proceedings of the 14th ACM Conference on Computer and
+                 Communications Security (CCS)},
+    pages = {552--561},
+    year = {2007},
+    publisher = {ACM},
 }
 
 @inproceedings{ernst2007daikon,
-  title={The Daikon system for dynamic detection of likely invariants},
-  author={Ernst, Michael D and Cockrell, Jake and Griswold, William G and Notkin, David},
-  journal={Science of Computer Programming},
-  volume={69},
-  number={1-3},
-  pages={35--45},
-  year={2007},
-  publisher={Elsevier}
+    title = {The Daikon system for dynamic detection of likely invariants},
+    author = {Ernst, Michael D and Cockrell, Jake and Griswold, William G and
+              Notkin, David},
+    journal = {Science of Computer Programming},
+    volume = {69},
+    number = {1-3},
+    pages = {35--45},
+    year = {2007},
+    publisher = {Elsevier},
 }
 
 @inproceedings{lerner2019gvisor,
-  title={gVisor: Contemporary Container Sandbox},
-  author={Lerner, Ian and Muthusamy, Pratyush and DeMarinis, Nicholas and Garfinkel, Tal and Lee, Wyatt and Ragsdale, Ray and Bauman, Felix and Jin, Yushi and Arya, Dhruv and Taylor, Brandon and others},
-  booktitle={16th USENIX Symposium on Networked Systems Design and Implementation (NSDI 19)},
-  pages={691--705},
-  year={2019}
+    title = {gVisor: Contemporary Container Sandbox},
+    author = {Lerner, Ian and Muthusamy, Pratyush and DeMarinis, Nicholas and
+              Garfinkel, Tal and Lee, Wyatt and Ragsdale, Ray and Bauman, Felix
+              and Jin, Yushi and Arya, Dhruv and Taylor, Brandon and others},
+    booktitle = {16th USENIX Symposium on Networked Systems Design and
+                 Implementation (NSDI 19)},
+    pages = {691--705},
+    year = {2019},
 }
 
 @inproceedings{somayaji2000automated,
-  title={Automated response using $\{$System-Call$\}$ delay},
-  author={Somayaji, Anil and Forrest, Stephanie},
-  booktitle={9th USENIX security symposium (USENIX security 00)},
-  year={2000}
+    title = {Automated response using $\{$System-Call$\}$ delay},
+    author = {Somayaji, Anil and Forrest, Stephanie},
+    booktitle = {9th USENIX security symposium (USENIX security 00)},
+    year = {2000},
 }
 
 @inproceedings{garfinkel2004ostia,
-  title={Ostia: A delegating architecture for secure system call interposition.},
-  author={Garfinkel, Tal and Pfaff, Ben and Rosenblum, Mendel and others},
-  booktitle={NDSS},
-  year={2004},
-  organization={Citeseer}
+    title = {Ostia: A delegating architecture for secure system call
+             interposition.},
+    author = {Garfinkel, Tal and Pfaff, Ben and Rosenblum, Mendel and others},
+    booktitle = {NDSS},
+    year = {2004},
+    organization = {Citeseer},
 }
 
 @inproceedings{sandbox-adoption,
-author = {Alhindi, Maysara and Hallett, Joseph},
-title = {Sandboxing Adoption in Open Source Ecosystems},
-year = {2024},
-isbn = {9798400705571},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3643655.3643878},
-doi = {10.1145/3643655.3643878},
-abstract = {Sandboxing mechanisms allow developers to limit how much access applications have to resources, following the least-privilege principle. However, it's not clear how much and in what ways developers are using these mechanisms. This study looks at the use of Seccomp, Landlock, Capsicum, Pledge, and Unveil in all packages of four open-source operating systems. We found that less than 1\% of packages directly use these mechanisms, but many more indirectly use them. Examining how developers apply these mechanisms reveals interesting usage patterns, such as cases where developers simplify their sandbox implementation. It also highlights challenges that may be hindering the widespread adoption of sandboxing mechanisms.},
-booktitle = {Proceedings of the 12th ACM/IEEE International Workshop on Software Engineering for Systems-of-Systems and Software Ecosystems},
-pages = {13¿20},
-numpages = {8},
-location = {Lisbon, Portugal},
-series = {SESoS '24}
+    author = {Alhindi, Maysara and Hallett, Joseph},
+    title = {Sandboxing Adoption in Open Source Ecosystems},
+    year = {2024},
+    isbn = {9798400705571},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3643655.3643878},
+    doi = {10.1145/3643655.3643878},
+    abstract = {Sandboxing mechanisms allow developers to limit how much access
+                applications have to resources, following the least-privilege
+                principle. However, it's not clear how much and in what ways
+                developers are using these mechanisms. This study looks at the
+                use of Seccomp, Landlock, Capsicum, Pledge, and Unveil in all
+                packages of four open-source operating systems. We found that
+                less than 1\% of packages directly use these mechanisms, but many
+                more indirectly use them. Examining how developers apply these
+                mechanisms reveals interesting usage patterns, such as cases
+                where developers simplify their sandbox implementation. It also
+                highlights challenges that may be hindering the widespread
+                adoption of sandboxing mechanisms.},
+    booktitle = {Proceedings of the 12th ACM/IEEE International Workshop on
+                 Software Engineering for Systems-of-Systems and Software
+                 Ecosystems},
+    pages = {13¿20},
+    numpages = {8},
+    location = {Lisbon, Portugal},
+    series = {SESoS '24},
 }
 
 @mastersthesis{wagner1999janus,
-  title={Janus: an approach for confinement of untrusted applications},
-  author={Wagner, David A},
-  year={1999},
-  school={University of California, Berkeley}
+    title = {Janus: an approach for confinement of untrusted applications},
+    author = {Wagner, David A},
+    year = {1999},
+    school = {University of California, Berkeley},
 }
 
 @online{chromium_sandboxing,
-  author       = {{The Chromium Project}},
-  title        = {Linux Sandboxing},
-  year         = {2023},
-  url          = {https://chromium.googlesource.com/chromium/src/+/refs/tags/112.0.5590.0/docs/linux/sandboxing.md},
-  urldate      = {2025-05-01},
-  note         = {Accessed: 2025-05-01}
+    author = {{The Chromium Project}},
+    title = {Linux Sandboxing},
+    year = {2023},
+    url = {
+           https://chromium.googlesource.com/chromium/src/+/refs/tags/112.0.5590.0/docs/linux/sandboxing.md
+           },
+    urldate = {2025-05-01},
+    note = {Accessed: 2025-05-01},
 }
 
-@inproceedings {TEMPORAL_SPEC,
-author = {Seyedhamed Ghavamnia and Tapti Palit and Shachee Mishra and Michalis Polychronakis},
-title = {Temporal System Call Specialization for Attack Surface Reduction},
-booktitle = {29th USENIX Security Symposium (USENIX Security 20)},
-year = {2020},
-isbn = {978-1-939133-17-5},
-pages = {1749--1766},
-url = {https://www.usenix.org/conference/usenixsecurity20/presentation/ghavamnia},
-publisher = {USENIX Association},
-month = aug
+@inproceedings{TEMPORAL_SPEC,
+    author = {Seyedhamed Ghavamnia and Tapti Palit and Shachee Mishra and
+              Michalis Polychronakis},
+    title = {Temporal System Call Specialization for Attack Surface Reduction},
+    booktitle = {29th USENIX Security Symposium (USENIX Security 20)},
+    year = {2020},
+    isbn = {978-1-939133-17-5},
+    pages = {1749--1766},
+    url = {
+           https://www.usenix.org/conference/usenixsecurity20/presentation/ghavamnia
+           },
+    publisher = {USENIX Association},
+    month = aug,
 }
 
 @inproceedings{SYSXCHG,
-author = {Gaidis, Alexander J. and Atlidakis, Vaggelis and Kemerlis, Vasileios P.},
-title = {SysXCHG: Refining Privilege with Adaptive System Call Filters},
-year = {2023},
-isbn = {9798400700507},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3576915.3623137},
-doi = {10.1145/3576915.3623137},
-abstract = {We present the design, implementation, and evaluation of SysXCHG: a system call (syscall) filtering enforcement mechanism that enables programs to run in accordance with the principle of least privilege. In contrast to the current, hierarchical design of seccomp-BPF, which does not allow a program to run with a different set of allowed syscalls than its descendants, SysXCHG enables applications to run with "tight" syscall filters, uninfluenced by any future-executed (sub-)programs, by allowing filters to be dynamically exchanged at runtime during execve[at]. As a part of SysXCHG, we also present xfilter: a mechanism for fast filtering using a process-specific view of the kernel's syscall table where filtering is performed. In our evaluation of SysXCHG, we found that our filter exchanging design is performant, incurring ²= 1.71\% slowdown on real-world programs in the PaSH benchmark suite, as well as effective, blocking vast amounts of extraneous functionality, including security-critical syscalls, which the current design of seccomp-BPF is unable to.},
-booktitle = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security},
-pages = {1964Ð1978},
-numpages = {15},
-keywords = {adaptive filtering, attack surface reduction, system call filtering},
-location = {Copenhagen, Denmark},
-series = {CCS '23}
+    author = {Gaidis, Alexander J. and Atlidakis, Vaggelis and Kemerlis,
+              Vasileios P.},
+    title = {SysXCHG: Refining Privilege with Adaptive System Call Filters},
+    year = {2023},
+    isbn = {9798400700507},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3576915.3623137},
+    doi = {10.1145/3576915.3623137},
+    abstract = {We present the design, implementation, and evaluation of
+                SysXCHG: a system call (syscall) filtering enforcement mechanism
+                that enables programs to run in accordance with the principle of
+                least privilege. In contrast to the current, hierarchical design
+                of seccomp-BPF, which does not allow a program to run with a
+                different set of allowed syscalls than its descendants, SysXCHG
+                enables applications to run with "tight" syscall filters,
+                uninfluenced by any future-executed (sub-)programs, by allowing
+                filters to be dynamically exchanged at runtime during execve[at].
+                As a part of SysXCHG, we also present xfilter: a mechanism for
+                fast filtering using a process-specific view of the kernel's
+                syscall table where filtering is performed. In our evaluation of
+                SysXCHG, we found that our filter exchanging design is performant
+                , incurring ²= 1.71\% slowdown on real-world programs in the PaSH
+                benchmark suite, as well as effective, blocking vast amounts of
+                extraneous functionality, including security-critical syscalls,
+                which the current design of seccomp-BPF is unable to.},
+    booktitle = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and
+                 Communications Security},
+    pages = {1964Ð1978},
+    numpages = {15},
+    keywords = {adaptive filtering, attack surface reduction, system call
+                filtering},
+    location = {Copenhagen, Denmark},
+    series = {CCS '23},
 }
 
 @misc{jia2023programmablesecurityebpf,
-      title={Programmable System Call Security with eBPF}, 
-      author={Jinghao Jia and YiFei Zhu and Dan Williams and Andrea Arcangeli and Claudio Canella and Hubertus Franke and Tobin Feldman-Fitzthum and Dimitrios Skarlatos and Daniel Gruss and Tianyin Xu},
-      year={2023},
-      eprint={2302.10366},
-      archivePrefix={arXiv},
-      primaryClass={cs.OS},
-      url={https://arxiv.org/abs/2302.10366}, 
+    title = {Programmable System Call Security with eBPF},
+    author = {Jinghao Jia and YiFei Zhu and Dan Williams and Andrea Arcangeli
+              and Claudio Canella and Hubertus Franke and Tobin Feldman-Fitzthum
+              and Dimitrios Skarlatos and Daniel Gruss and Tianyin Xu},
+    year = {2023},
+    eprint = {2302.10366},
+    archivePrefix = {arXiv},
+    primaryClass = {cs.OS},
+    url = {https://arxiv.org/abs/2302.10366},
 }
 
 @inproceedings{ahad2023freepart,
-  title={FreePart: Hardening Data Processing Software via Framework-based Partitioning and Isolation},
-  author={Ahad, Ali and Wang, Gang and Kim, Chung Hwan and Jana, Suman and Lin, Zhiqiang and Kwon, Yonghwi},
-  booktitle={Proceedings of the 28th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 4},
-  pages={169--188},
-  year={2023}
+    title = {FreePart: Hardening Data Processing Software via Framework-based
+             Partitioning and Isolation},
+    author = {Ahad, Ali and Wang, Gang and Kim, Chung Hwan and Jana, Suman and
+              Lin, Zhiqiang and Kwon, Yonghwi},
+    booktitle = {Proceedings of the 28th ACM International Conference on
+                 Architectural Support for Programming Languages and Operating
+                 Systems, Volume 4},
+    pages = {169--188},
+    year = {2023},
 }
 
 @online{cilium2025,
-  author  = {{Cilium Project}},
-  title   = {Cilium: eBPF-based Networking, Observability, and Security},
-  year    = {2025},
-  url     = {https://cilium.io/},
-  urldate = {2025-05-01}
+    author = {{Cilium Project}},
+    title = {Cilium: eBPF-based Networking, Observability, and Security},
+    year = {2025},
+    url = {https://cilium.io/},
+    urldate = {2025-05-01},
 }
 
 @misc{falco2025,
-  author       = {{Falco Project}},
-  title        = {Falco: Cloud Native Runtime Security},
-  year         = {2025},
-  howpublished = {\url{https://falco.org/}},
-  note         = {Accessed: 2025-05-01}
+    author = {{Falco Project}},
+    title = {Falco: Cloud Native Runtime Security},
+    year = {2025},
+    howpublished = {\url{https://falco.org/}},
+    note = {Accessed: 2025-05-01},
 }
 
 @misc{tetragon2025,
-  author       = {{Tetragon Project}},
-  title        = {Tetragon: eBPF-based Security Observability and Runtime Enforcement},
-  year         = {2025},
-  howpublished = {\url{https://tetragon.io/}},
-  note         = {Accessed: 2025-05-01}
+    author = {{Tetragon Project}},
+    title = {Tetragon: eBPF-based Security Observability and Runtime Enforcement
+             },
+    year = {2025},
+    howpublished = {\url{https://tetragon.io/}},
+    note = {Accessed: 2025-05-01},
 }
 
 
 
 @article{XING2022105,
-title = {The devil is in the detail: Generating system call whitelist for Linux seccomp},
-journal = {Future Generation Computer Systems},
-volume = {135},
-pages = {105-113},
-year = {2022},
-issn = {0167-739X},
-doi = {https://doi.org/10.1016/j.future.2022.04.016},
-url = {https://www.sciencedirect.com/science/article/pii/S0167739X2200139X},
-author = {Yunlong Xing and Jiahao Cao and Kun Sun and Fei Yan and Shengye Wan},
-keywords = {System call restriction, Attack surface reduction, Whitelist generation, Software security, System enhancement, Static analysis},
-abstract = {The system calls provide the main interface for user processes to request the kernel services, however, for any specific process, most of them will not be needed. If a user process is compromised, those unnecessary system calls can be abused to attack the kernel and the other processes. To migrate this problem, the seccomp mechanism has been merged into the Linux kernel to limit the available system calls according to a system call whitelist. However, it is still a challenge to automatically and effectively generate a minimal but complete system call whitelist for a specific user process. In this paper, we develop a toolkit named TAILOR that mainly relies on the static analysis to generate a mapping table for the standard library from the library functions to their corresponding system calls based on the source code analysis. Then for any application that invokes system calls via the standard library, we can just compare the called library functions in the application with the mapping table to obtain required system calls. TAILOR solves the problems during source-level standard library analysis, which consist of the difficulty in macro function identification, unchained calling tree caused by macro aliases, and the difficulty in identifying the function scope via static analysis. Our experiments on 50 popular general terminal commands show that our tool can reduce 88% system calls for them and block about 74% potential vulnerabilities from malicious system calls.}
+    title = {The devil is in the detail: Generating system call whitelist for
+             Linux seccomp},
+    journal = {Future Generation Computer Systems},
+    volume = {135},
+    pages = {105-113},
+    year = {2022},
+    issn = {0167-739X},
+    doi = {https://doi.org/10.1016/j.future.2022.04.016},
+    url = {https://www.sciencedirect.com/science/article/pii/S0167739X2200139X},
+    author = {Yunlong Xing and Jiahao Cao and Kun Sun and Fei Yan and Shengye
+              Wan},
+    keywords = {System call restriction, Attack surface reduction, Whitelist
+                generation, Software security, System enhancement, Static
+                analysis},
+    abstract = {The system calls provide the main interface for user processes
+                to request the kernel services, however, for any specific process
+                , most of them will not be needed. If a user process is
+                compromised, those unnecessary system calls can be abused to
+                attack the kernel and the other processes. To migrate this
+                problem, the seccomp mechanism has been merged into the Linux
+                kernel to limit the available system calls according to a system
+                call whitelist. However, it is still a challenge to automatically
+                and effectively generate a minimal but complete system call
+                whitelist for a specific user process. In this paper, we develop
+                a toolkit named TAILOR that mainly relies on the static analysis
+                to generate a mapping table for the standard library from the
+                library functions to their corresponding system calls based on
+                the source code analysis. Then for any application that invokes
+                system calls via the standard library, we can just compare the
+                called library functions in the application with the mapping
+                table to obtain required system calls. TAILOR solves the problems
+                during source-level standard library analysis, which consist of
+                the difficulty in macro function identification, unchained
+                calling tree caused by macro aliases, and the difficulty in
+                identifying the function scope via static analysis. Our
+                experiments on 50 popular general terminal commands show that our
+                tool can reduce 88% system calls for them and block about 74%
+                potential vulnerabilities from malicious system calls.},
 }
 
 @online{angr2025,
-  author  = {{The angr Project}},
-  title   = {angr: A Powerful and User-Friendly Binary Analysis Platform},
-  year    = {2025},
-  url     = {https://angr.io/},
-  urldate = {2025-05-01}
+    author = {{The angr Project}},
+    title = {angr: A Powerful and User-Friendly Binary Analysis Platform},
+    year = {2025},
+    url = {https://angr.io/},
+    urldate = {2025-05-01},
 }
 
 @inproceedings{BSIDE,
-  author       = {Gaspard Th{\'e}venon and Kevin Nguetchouang and Kahina Lazri and Alain Tchana and Pierre Olivier},
-  title        = {B-Side: Binary-Level Static System Call Identification},
-  booktitle    = {Proceedings of the 25th International Middleware Conference (Middleware '24)},
-  year         = {2024},
-  pages        = {225--237},
-  publisher    = {Association for Computing Machinery},
-  address      = {New York, NY, USA},
-  doi          = {10.1145/3652892.3700761},
-  url          = {https://doi.org/10.1145/3652892.3700761},
-  isbn         = {979-8-4007-0623-3},
-  keywords     = {static analysis, binary analysis, system call filtering},
-  abstract     = {System call filtering is widely used to secure programs in multi-tenant environments, and to sandbox applications in modern desktop software deployment and package management systems. Filtering rules are hard to write and maintain manually, hence generating them automatically is essential. To that aim, analysis tools able to identify every system call that can legitimately be invoked by a program are needed. Existing static analysis works lack precision because of a high number of false positives, and/or assume the availability of program/libraries source code - something unrealistic in many scenarios such as cloud production environments. We present B-Side, a static binary analysis tool able to identify a superset of the system calls that an x86-64 static/dynamic executable may invoke at runtime. B-Side assumes no access to program/libraries sources, and shows a good degree of precision by leveraging symbolic execution, combined with a heuristic to detect system call wrappers, which represent an important source of precision loss in existing works. B-Side also allows to statically detect phases of execution in a program in which different filtering rules can be applied. We validate B-Side and demonstrate its higher precision compared to state-of-the-art works: over a set of popular applications, B-Side's average F1 score is 0.81, vs. 0.31 and 0.53 for competitors. Over 557 static and dynamically-compiled binaries taken from the Debian repositories, B-Side identifies an average of 43 system calls, vs. 271 and 95 for two state-of-the art competitors. We further evaluate the strictness of the phase-based filtering policies that can be obtained with B-Side.},
-  location     = {Hong Kong, Hong Kong},
-  numpages     = {13},
-  series       = {Middleware '24}
+    author = {Gaspard Th{\'e}venon and Kevin Nguetchouang and Kahina Lazri and
+              Alain Tchana and Pierre Olivier},
+    title = {B-Side: Binary-Level Static System Call Identification},
+    booktitle = {Proceedings of the 25th International Middleware Conference
+                 (Middleware '24)},
+    year = {2024},
+    pages = {225--237},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    doi = {10.1145/3652892.3700761},
+    url = {https://doi.org/10.1145/3652892.3700761},
+    isbn = {979-8-4007-0623-3},
+    keywords = {static analysis, binary analysis, system call filtering},
+    abstract = {System call filtering is widely used to secure programs in
+                multi-tenant environments, and to sandbox applications in modern
+                desktop software deployment and package management systems.
+                Filtering rules are hard to write and maintain manually, hence
+                generating them automatically is essential. To that aim, analysis
+                tools able to identify every system call that can legitimately be
+                invoked by a program are needed. Existing static analysis works
+                lack precision because of a high number of false positives,
+                and/or assume the availability of program/libraries source code -
+                something unrealistic in many scenarios such as cloud production
+                environments. We present B-Side, a static binary analysis tool
+                able to identify a superset of the system calls that an x86-64
+                static/dynamic executable may invoke at runtime. B-Side assumes
+                no access to program/libraries sources, and shows a good degree
+                of precision by leveraging symbolic execution, combined with a
+                heuristic to detect system call wrappers, which represent an
+                important source of precision loss in existing works. B-Side also
+                allows to statically detect phases of execution in a program in
+                which different filtering rules can be applied. We validate
+                B-Side and demonstrate its higher precision compared to
+                state-of-the-art works: over a set of popular applications,
+                B-Side's average F1 score is 0.81, vs. 0.31 and 0.53 for
+                competitors. Over 557 static and dynamically-compiled binaries
+                taken from the Debian repositories, B-Side identifies an average
+                of 43 system calls, vs. 271 and 95 for two state-of-the art
+                competitors. We further evaluate the strictness of the
+                phase-based filtering policies that can be obtained with B-Side.},
+    location = {Hong Kong, Hong Kong},
+    numpages = {13},
+    series = {Middleware '24},
 }
 
-@inproceedings {JENNY,
-author = {David Schrammel and Samuel Weiser and Richard Sadek and Stefan Mangard},
-title = {Jenny: Securing Syscalls for {PKU-based} Memory Isolation Systems},
-booktitle = {31st USENIX Security Symposium (USENIX Security 22)},
-year = {2022},
-isbn = {978-1-939133-31-1},
-address = {Boston, MA},
-pages = {936--952},
-url = {https://www.usenix.org/conference/usenixsecurity22/presentation/schrammel},
-publisher = {USENIX Association},
-month = aug
-}
-
-@article{10.1145/2678373.2665740,
-author = {Woodruff, Jonathan and Watson, Robert N.M. and Chisnall, David and Moore, Simon W. and Anderson, Jonathan and Davis, Brooks and Laurie, Ben and Neumann, Peter G. and Norton, Robert and Roe, Michael},
-title = {The CHERI capability model: revisiting RISC in an age of risk},
-year = {2014},
-issue_date = {June 2014},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {42},
-number = {3},
-issn = {0163-5964},
-url = {https://doi.org/10.1145/2678373.2665740},
-doi = {10.1145/2678373.2665740},
-abstract = {Motivated by contemporary security challenges, we reevaluate and refine capability-based addressing for the RISC era. We present CHERI, a hybrid capability model that extends the 64-bit MIPS ISA with byte-granularity memory protection. We demonstrate that CHERI enables language memory model enforcement and fault isolation in hardware rather than software, and that the CHERI mechanisms are easily adopted by existing programs for efficient in-program memory safety. In contrast to past capability models, CHERI complements, rather than replaces, the ubiquitous page-based protection mechanism, providing a migration path towards deconflating data-structure protection and OS memory management. Furthermore, CHERI adheres to a strict RISC philosophy: it maintains a load-store architecture and requires only singlecycle instructions, and supplies protection primitives to the compiler, language runtime, and operating system. We demonstrate a mature FPGA implementation that runs the FreeBSD operating system with a full range of software and an open-source application suite compiled with an extended LLVM to use CHERI memory protection. A limit study compares published memory safety mechanisms in terms of instruction count and memory overheads. The study illustrates that CHERI is performance-competitive even while providing assurance and greater flexibility with simpler hardware},
-journal = {SIGARCH Comput. Archit. News},
-month = jun,
-pages = {457¿468},
-numpages = {12}
+@inproceedings{JENNY,
+    author = {David Schrammel and Samuel Weiser and Richard Sadek and Stefan
+              Mangard},
+    title = {Jenny: Securing Syscalls for {PKU-based} Memory Isolation Systems},
+    booktitle = {31st USENIX Security Symposium (USENIX Security 22)},
+    year = {2022},
+    isbn = {978-1-939133-31-1},
+    address = {Boston, MA},
+    pages = {936--952},
+    url = {
+           https://www.usenix.org/conference/usenixsecurity22/presentation/schrammel
+           },
+    publisher = {USENIX Association},
+    month = aug,
 }
 
 @inproceedings{CHERI,
-author = {Woodruff, Jonathan and Watson, Robert N.M. and Chisnall, David and Moore, Simon W. and Anderson, Jonathan and Davis, Brooks and Laurie, Ben and Neumann, Peter G. and Norton, Robert and Roe, Michael},
-title = {The CHERI capability model: revisiting RISC in an age of risk},
-year = {2014},
-isbn = {9781479943944},
-publisher = {IEEE Press},
-abstract = {Motivated by contemporary security challenges, we reevaluate and refine capability-based addressing for the RISC era. We present CHERI, a hybrid capability model that extends the 64-bit MIPS ISA with byte-granularity memory protection. We demonstrate that CHERI enables language memory model enforcement and fault isolation in hardware rather than software, and that the CHERI mechanisms are easily adopted by existing programs for efficient in-program memory safety. In contrast to past capability models, CHERI complements, rather than replaces, the ubiquitous page-based protection mechanism, providing a migration path towards deconflating data-structure protection and OS memory management. Furthermore, CHERI adheres to a strict RISC philosophy: it maintains a load-store architecture and requires only singlecycle instructions, and supplies protection primitives to the compiler, language runtime, and operating system. We demonstrate a mature FPGA implementation that runs the FreeBSD operating system with a full range of software and an open-source application suite compiled with an extended LLVM to use CHERI memory protection. A limit study compares published memory safety mechanisms in terms of instruction count and memory overheads. The study illustrates that CHERI is performance-competitive even while providing assurance and greater flexibility with simpler hardware},
-booktitle = {Proceeding of the 41st Annual International Symposium on Computer Architecuture},
-pages = {457¿468},
-numpages = {12},
-location = {Minneapolis, Minnesota, USA},
-series = {ISCA '14}
+    author = {Woodruff, Jonathan and Watson, Robert N.M. and Chisnall, David and
+              Moore, Simon W. and Anderson, Jonathan and Davis, Brooks and Laurie
+              , Ben and Neumann, Peter G. and Norton, Robert and Roe, Michael},
+    title = {The CHERI capability model: revisiting RISC in an age of risk},
+    year = {2014},
+    isbn = {9781479943944},
+    publisher = {IEEE Press},
+    abstract = {Motivated by contemporary security challenges, we reevaluate and
+                refine capability-based addressing for the RISC era. We present
+                CHERI, a hybrid capability model that extends the 64-bit MIPS ISA
+                with byte-granularity memory protection. We demonstrate that
+                CHERI enables language memory model enforcement and fault
+                isolation in hardware rather than software, and that the CHERI
+                mechanisms are easily adopted by existing programs for efficient
+                in-program memory safety. In contrast to past capability models,
+                CHERI complements, rather than replaces, the ubiquitous
+                page-based protection mechanism, providing a migration path
+                towards deconflating data-structure protection and OS memory
+                management. Furthermore, CHERI adheres to a strict RISC
+                philosophy: it maintains a load-store architecture and requires
+                only singlecycle instructions, and supplies protection primitives
+                to the compiler, language runtime, and operating system. We
+                demonstrate a mature FPGA implementation that runs the FreeBSD
+                operating system with a full range of software and an open-source
+                application suite compiled with an extended LLVM to use CHERI
+                memory protection. A limit study compares published memory safety
+                mechanisms in terms of instruction count and memory overheads.
+                The study illustrates that CHERI is performance-competitive even
+                while providing assurance and greater flexibility with simpler
+                hardware},
+    booktitle = {Proceeding of the 41st Annual International Symposium on
+                 Computer Architecuture},
+    pages = {457¿468},
+    numpages = {12},
+    location = {Minneapolis, Minnesota, USA},
+    series = {ISCA '14},
 }
 
-@ARTICLE{SALTZER_SCHROEDER,
-  author={Saltzer, J.H. and Schroeder, M.D.},
-  journal={Proceedings of the IEEE}, 
-  title={The protection of information in computer systems}, 
-  year={1975},
-  volume={63},
-  number={9},
-  pages={1278-1308},
-  keywords={Protection;Authorization;Permission;Access control;Terminology;Data security;Information security;Computer architecture;Modems},
-  doi={10.1109/PROC.1975.9939}}
+@article{SALTZER_SCHROEDER,
+    author = {Saltzer, J.H. and Schroeder, M.D.},
+    journal = {Proceedings of the IEEE},
+    title = {The protection of information in computer systems},
+    year = {1975},
+    volume = {63},
+    number = {9},
+    pages = {1278-1308},
+    keywords = {Protection;Authorization;Permission;Access
+                control;Terminology;Data security;Information security;Computer
+                architecture;Modems},
+    doi = {10.1109/PROC.1975.9939},
+}
 

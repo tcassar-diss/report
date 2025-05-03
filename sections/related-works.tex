@@ -28,6 +28,16 @@ seccomp filters.
 This widespread adoption means that system call filtering is still a widely
 researched topic in modern systems security literature. 
 
+A trend is emerging in system call filtering research towards 
+\textit{finer-grained} system call filters, in which multiple smaller, more
+precise filters are applied to an application 
+\cite{SYSPART, SYSXCHG, ahad2023freepart}. The vast majority of this work is
+\textit{temporal}: different filters are applied to the same application at
+different points in time \cite{SYSPART, TEMPORAL_SPEC}. Temporal syscall
+filters rely on accurate phase detection, and any misidentification or delay
+in switching filters can create brief but exploitable windows where security
+policies are not fully enforced. 
+
 SysPart \cite{SYSPART} heavily inspired \af as it also
 looks at fine grained system call filtering. SysPart focuses on \textit{temporal
 separation} - an application is split into two phases, setup and steady-state.
@@ -86,12 +96,12 @@ well-defined, secure interfaces \cite{CONFFUZZ}. Therefore, attackers who
 compromise a compartment are confined to it, limiting the damage that they can
 cause the overall system.
 
-As referenced in Section~\ref{subsec:assumptions}, \af presupposes that some
+As referenced in Section~\ref{subsec:objs-assumpions-tm}, \af presupposes that some
 form of compartmentalisation which will prevent an attacker from branching to
 another place in the process's \ac{vma} as is in place. The CHERI capability
 model \cite{CHERI} is a \textit{capability} model which extends the 64-bit MIPS
-\ac{isa}\footnote{This, unfortunately, means that it is incompatible with \af as \af
-currently only supports x86.}, and can stop an attacker from moving through the
+\ac{isa}\footnote{This means that it is incompatible with \af as \af
+currently only supports the x86 \ac{isa}.}, and can stop an attacker from moving through the
 \ac{vma} at will. 
 
 System call filtering has been applied to \ac{pku} based applications as with

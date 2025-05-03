@@ -16,10 +16,11 @@
 \renewcommand\maketitlehookd{\vfill\null}
 \usepackage{array}
 
-\usepackage[backend=bibtex,bibencoding=ascii]{biblatex}
+\usepackage[backend=bibtex,bibencoding=ascii,url=true,hyperref=true]{biblatex}
+\AtBeginBibliography{\sloppy}
 \addbibresource{main.bib}
 
-\usepackage[hidelinks]{hyperref}
+\usepackage[hidelinks,breaklinks]{hyperref}
 \usepackage{adjustbox}
 \usepackage[dvipsnames]{xcolor}
 
@@ -98,7 +99,8 @@
 \usetikzlibrary{ positioning, arrows.meta, calc, shapes.geometric, shadows,
 decorations.pathreplacing, calligraphy, shapes.symbols}
 
-\hypersetup{breaklinks=true}
+
+\usepackage[hyphens]{url}
 
 % Optional: Configure listing style globally
 \lstdefinestyle{mystyle}{
@@ -192,11 +194,6 @@ decorations.pathreplacing, calligraphy, shapes.symbols}
 \DeclareAcronym{os}{ 
     short = OS,
     long = Operating System,
-}
-
-\DeclareAcronym{syscall}{
-    short = syscall,
-    long = System Call,
 }
 
 \DeclareAcronym{xdp}{
@@ -351,7 +348,3 @@ decorations.pathreplacing, calligraphy, shapes.symbols}
     long-plural = Protection Keys for Userspace,
 }
 
-\DeclareAcronym{polp} {
-    short = PoLP,
-    long = Principle of Least Privilege
-}

@@ -15,35 +15,26 @@ represent more chances for vulnerabilities to appear. Therefore, it was
 important to design \af to be \textit{as minimal as possible} while
 fulfilling the promise of the proposed fine-grained filtering.
 
-To do this, we defined a \textbf{threat model} and let primary requirements
-follow. These primary requirements are presented alongside our design
-assumptions .The project's nature also requires some
-auxiliary tooling, which is discussed after \afg design is
-presented.
+To do this, we defined a threat model and let primary requirements and
+engineering assumptions follow. The project's nature also requires some auxiliary
+tooling, which is discussed after \afg design is presented. 
 
-\subsection{Objectives, Threat Model, and Assumptions}\label{subsec:threat-model} \todo{big change}
+\subsection{Threat Model, Objectives, and Assumptions}\label{subsec:objs-assumpions-tm}
 
-We started by creating a \textbf{threat model} which lays out the situations and
-pre-conditions where \af is effective at protecting an application.
+% Threat Model
 
-Firstly, we assume that 1) a \ac{ta} has gained \ac{rce} privileges on the host
-machine \footnote{We refer to the machine running \af as the \textit{host
-}}. That is, the \ac{ta} can execute any user space code they wish on the
-host. This is one of the most serious breaches that can happen and often
-lead to denial of service, data loss, or data theft \cite{RCE_BAD}. 
+Designing a concrete implementation of any security tooling requires a threat
+model. We begin by laying out the situations and preconditions where \af effectively
+protects applications. We establish this model based on the separation
+between the untrusted application space and the trusted kernel. 
 
-The attacker aims to use their \ac{rce} exploit to \textbf{escalate privilege}. This
-means we assume that 2) the \ac{ta} doesn't have root privileges on the host,
-but will act to get them.
-
-\af assumes that 3) some form of \textbf{software compartmentalisation} is in
-place on the host machine. This compartmentalisation confines the \ac{ta} to the
-compromised compartment \cite{SOK}, preventing the \ac{ta} 
-from branching to an area of the address space that has a different allowed set
-of system calls. We assume that the compartmentalisation in place is at most as
-broad as that shown in Figure~\ref{fig:compartments-around-vma}. That is, if an
-attacker gains access to a file backed region of the address space, they will be
-contained there.
+\af assumes 1) a form of \textit{software compartmentalisation} is implemented
+on the host system which will confine an attacker to the compartment that
+they have breached. A compartmentalised application is made up of multiple \textit
+{security domains} which are mutually distrusting \cite{SOK}. Our
+implementation of \af assumes compartment boundaries to be the \textit{shared
+libraries} in a process's \ac{vma} as in Figure~\ref{fig:compartments-around-vma},
+although the concept can be generalised across the \ac{vma}.
 
 \begin{figure}[ht]
     \centering
@@ -53,34 +44,45 @@ contained there.
     \label{fig:compartments-around-vma}
 \end{figure}
 
-For completeness, we also explicitly assume that the attacker does not have a
-kernel-level exploit. This is out of scope as a kernel level exploit effectively
-gives an attacker root access to the host.
+We assume 2) an attacker has compromised one or more of these compartments and that
+3) they have \textit{arbitrary code execution} within the compartment's context. We
+assume 4) the attacker's goal is to exploit a bug in the kernel via a series of
+system calls; this could be privilege escalation (e.g. taking over the kernel's
+execution flow), leaking/tampering with kernel-critical data, or attempting to
+bypass compartmentalisation. 
 
-Defining the high level requirements for \af is now possible, as we can reason
-about exactly \textbf{what \af must protect against}.
+For completeness, we assume 5) that the attacker does not already have a 
+kernel-level exploit and that the process they compromised does not have root
+access. This is out of scope as a kernel-level exploit effectively gives the
+attacker root access to the host, which results in complete system compromise.
 
-% Use/reference BPF threat model
-% https://www.linuxfoundation.org/hubfs/eBPF/ControlPlane%20%E2%80%94%20eBPF%20Security%20Threat%20Model.pdf#page=11.14
+% end Threat Model
 
-\afg key feature is that it should detect where an application makes a 
-\textbf{disallowed system call} and intervene accordingly. 
+% Objectives
 
-This intervention should be \textbf{user configurable}: warning the user, killing 
-the malicious process, and killing all protected processes should all be
-possible. This gives the user flexibility to choose how to trade-off
-availability and data integrity/confidentiality on a per-application basis.
+Having defined a threat model, we can define and list our objectives.
 
-We should see a \textbf{significant reduction} in the set of system calls a \ac{ta}
-can access after compromising an application, and we want to do this
-\textbf{without detrimentally impacting performance}.
+Our primary objective is to design a system that detects when an application
+makes a disallowed system call. Our solution, \af,  must locate the call's origin
+within the \ac{vma} and confirm that this memory region has the
+appropriate permissions to make the call.
 
-Finally, we note that system call filtering literature has not defined a standard
-way to measure the reduction in privilege that a particular filtering
-strategy provides. Therefore, we look to propose our own metric to quantify
-the level of privilege reduction afforded by \af when compared to seccomp.
+If \af detects a disallowed system call it must intervene in one of three (user
+configurable) ways: either it must kill the offending process, warn the user, or
+kill every process currently protected by the filter. This allows the user to
+choose the trade-off between availability and data integrity/confidentiality on
+a per-application basis.
 
-To summarise 
+We expect to see a significant reduction in the set of system calls that an
+attacker can use to compromise an application without detrimentally impacting
+application performance. 
+
+System call literature has not defined a standard for measuring the privilege
+of a set of system calls -- therefore, we look to propose our own
+\textit{probabilistic} metric to quantify the privilege reduction \af
+provides over seccomp.
+
+To summarise:
 
 \begin{enumerate}
     \item \af \textit{shall} associate a distinct system call whitelist with each unique file-backed region within a process's \ac{vma}.
@@ -91,14 +93,23 @@ To summarise
         with a newly proposed metric.
 \end{enumerate}
 
-The primary requirements listed above leave some questions unanswered.
-Developers do not know which system calls their application makes - let alone
-which shared libraries invoke each system call. Therefore, we also
-provide \textbf{automated whitelist generation tooling} alongside \af. 
+Given the novel nature of this solution, we cannot use readily available
+whitelist generators, as no current solutions identify system call
+invocation site. Therefore, we must implement our own \textit{automated whitelist 
+generation tool}, \texttt{afgen}. Whitelist generation is a separate research problem and is
+orthogonal to our proposed solution. Similarly, we need tooling to identify an
+application's system calls for evaluation purposes. For this, we implement
+\texttt{syso}.
 
-There are some rare cases which require significant engineering effort to cover.
-In these cases, we make some \textbf{simplifying assumptions}. This was done
-primarily to avoid adding unnecessary code and complexity to \afg design. 
+% end Objectives
+
+
+
+Alongside security assumptions, we also make some engineering assumptions when
+implementing \af reserved for rare cases which require significant
+engineering to cover. In these cases, we make some \textit{simplifying
+assumptions}. This was done primarily to avoid adding unnecessary code and 
+complexity to \afg design. 
  
 One of these is handling the case where \acg{libc} address space changes during
 execution. This is technically possible, but is rarely seen in production -
@@ -113,7 +124,9 @@ treated as disallowed system calls.
 We also assume that the \texttt{\_\_code\_\_} section of the \ac{libc}
 executable is mapped contiguously in memory. Again, this is
 true (almost) without exception\footnote{Custom patches to the kernel could
-violate this invariant} and reduces the code base size and complexity.
+violate this invariant} and allows \af to quickly determine if a given system
+call instruction was made from within \ac{libc}.
+
 It is also important to note that this assumption does not introduce a security
 risk due to the way that system call site identification is implemented and shown in
 Section \ref{subsubsec:impl-find-site-opt} \cite{glibc-dl-map-segments-h}.
@@ -149,7 +162,7 @@ tracepoint (discussed further in Section \ref{sec:implementation}).
 
 The backend of \af is made up of a single \ac{bpf} program and \ac{bpf}
 maps/ringbuffers to communicate with userspace.
-The program is attached to a \textbf{raw tracepoint}, and runs every time
+The program is attached to a \textit{raw tracepoint}, and runs every time
 a system call is made - even ones not called by by the app being filtered.
 
 \subsubsection{Determining Which system calls to
@@ -162,7 +175,7 @@ called process's \ac{pid} is in the map of filtered processes. If not, ignore
 the system call. Otherwise, we continue with the filtering.
 
 We also want to apply the filter to any child processes the
-application might create - this is called \textbf{fork following}. The reason for this is two-fold: a common workflow for
+application might create - this is called \textit{fork following}. The reason for this is two-fold: a common workflow for
 web servers (such as nginx) \cite{apache-prefork-2.4, nginx-inside-performance-scale-2015} is to fork on receiving a request; the second is
 that if a \ac{ta} could just call fork() to remove the system call filter, our
 solution would not be secure. Fork following is visualised in
@@ -181,7 +194,7 @@ are left unprotected.
 
 To do this, we can also check if the parent process's \ac{pid} is in the follow
 map. If it is, we add the calling \ac{pid} to the follow map, and continue with
-the filtering. So, we only ignore system call if \textbf{neither the current nor
+the filtering. So, we only ignore system call if \textit{neither the current nor
 parent \ac{pid} exists in the follow map}.
 
 Having decided to filter a system call, we need to identify where in the process's
@@ -193,7 +206,7 @@ library that actually made the system call.
 
 \subsubsection{Finding the system call Site}\label{subsubsec:find_syscall}
 
-Therefore, \af must find the \textbf{first non-\ac{libc} return pointer in the
+Therefore, \af must find the \textit{first non-\ac{libc} return pointer in the
 userspace stack}, and treat this address as the true system call site. In other
 words, we trace through the sequence of function calls that led to the system
 calls and find the first call that wasn't made by libc.
@@ -244,9 +257,9 @@ int main() {
 
 \end{figure}
 
-The addresses shown in the diagram are \textbf{return pointers}: these are the
+The addresses shown in the diagram are \textit{return pointers}: these are the
 memory address of the instructions which added a new frame to the stack. In this
-context, it's helpful to think of return pointers as the \textbf{address of a
+context, it's helpful to think of return pointers as the \textit{address of a
 function}. Note also that the top few stack frames all belong to \ac{libc}, with
 the main binary a few frames deeper.
 
@@ -361,7 +374,7 @@ Section~\ref{subsubsec:additional-tooling}.
 
 \subsection{Additional Tooling}\label{subsubsec:additional-tooling}
 
-The first additional tool that we implemented and \textbf{built in to \af} was
+The first additional tool that we implemented and \textit{built in to \af} was
 the whitelist generator. This whitelist generator works via dynamic analysis,
 which is not a gold standard for whitelist generation. For this use case,
 however, we think this acceptable - whitelist generation is orthogonal to our

@@ -1,1 +1,13 @@
 \section{Introduction}
+
+In this report, we present \af -- a fine grained, spatially aware, system call
+filter for Linux. We begin this report by explaining why production systems use
+system call filters, and why we believe that current filtering tooling is
+suboptimal. We move onto how we implemented \af, and then to valito validation
+and evaluation.
+
+\subsection{Introducing System Call Filtering}
+
+Applications perform dangerous actions, such as mapping memory or forking, via the
+\textit{system call} \ac{os} \ac{api}. 
+

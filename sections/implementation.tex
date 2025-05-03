@@ -16,11 +16,36 @@ optimisations built into \af.
 
 We decided to use \ac{bpf} in the backend, Go for the frontend, and the
 \texttt{ebpf-go} library from the Cilium project to interoperate between Go and
-\ac{bpf}.
+\ac{bpf}. We wrote \af in 3,400 \ac{loc}, 67\% of which was Go and 33\% was 
+\ac{bpf}. We developed around another 1,500\ac{loc} for additional tooling, and
+almost 3,000 \ac{loc} of Python to analyse benchmark results (as outlined in
+Section~\ref{subsec:perf-eval}). These figures are summarised in
+Table~\ref{tab:loc_breakdown}.
+
+\begin{table}[htbp] % Placement options: here, top, bottom, page
+    \centering % Center the table
+    \caption{Breakdown of Source Code Lines of Code (LOC) by Component and Language.} % Table caption
+    \label{tab:loc_breakdown} % Label for referencing the table (\ref{tab:loc_breakdown}) - KEPT THE SAME
+    \begin{tabular}{l l r l} % Column definitions: left, left, right, left alignment
+        \toprule % Top rule from booktabs
+        \textbf{Component/Purpose} & \textbf{Language/Technology} & \textbf{$\sim$ Lines of Code (LOC)}  \\
+        \midrule % Middle rule from booktabs
+        Main Application (\af) & Go                  & 2,500 \\
+        Main Application (\af) & BPF (\ac{bpf})    & 850 \\
+        \midrule % Optional rule before subtotal
+        \textbf{Subtotal: Main App} & \textbf{Go \& BPF} &  \textbf{3,400}\\
+        \midrule % Rule separating main app from others
+        Additional Tooling       & Go/\ac{bpf}     & 1,500 \\
+        Benchmark Analysis       & Python              & 3,000                       \\
+        \midrule % Rule before grand total
+        \textbf{Grand Total} & \textbf{Various} & \textbf{7,900} \\
+        \bottomrule % Bottom rule from booktabs
+    \end{tabular}
+\end{table}
 
 \ac{bpf} was chosen as it is lightweight, secure, and does not require 
 patching the kernel. It is expressive enough to be able to achieve 
-all of the design requirements listed in Section \ref{subsec:requirements} 
+all of the design requirements listed in Section \ref{subsec:objs-assumpions-tm} 
 but also formally verified, so that causing the kernel to crash becomes
 impossible.\footnote{Exploits and bugs mean that this isn't impossible, but in
 practice it is extremely hard to do.} \ac{bpf} programs can also be adopted and
@@ -37,14 +62,6 @@ in C as structs can be shared between \ac{bpf} and the rest of the code.
 This choice of Go may seem slightly unorthodox. We believe that Go's
 excellent concurrency model, ease of use, and compatibility with \ac{bpf} via
 \texttt{ebpf-go} make it the right choice for this project. 
-
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.8 \linewidth]{./diagrams/tech-stack.drawio.pdf} 
-    \caption{A figure showing the stack of technologies that \af is built with.}
-    \label{fig:tech-stack}
-\end{figure}
 
 It is significantly easier to develop in Go than in C owing to its runtime and other 
 modern language features. Reading ringbuffers asynchronously is much easier with 
@@ -94,7 +111,7 @@ eBPF Code Generator   & go2bpf (part of ebpf-go) \\
 \subsection{eBPF Helper Functions}
 
 Including the \texttt{bpf/bpf\_helpers} header file gives you access to a wide
-variety of \ac{bpf} \textbf{helper functions}: functions which are written in
+variety of \ac{bpf} \textit{helper functions}: functions which are written in
 the kernel instead of \ac{bpf} and provide common functionality such as reading
 data from structs \cite{ebpf-helper-functions-2025, ebpf-bpf-probe-read-user-2024}. 
 These are needed as lots of functions are unrepresentable in 
@@ -122,7 +139,7 @@ a working implementation.
 
 To do this, we \textit{attach} our \ac{bpf} filtering program to
 the \texttt{raw\_tp/sys\_enter} tracepoint using the \texttt{SEC} macro provided
-by the \texttt{bpf/bpf\_helpers} header file.
+by the \texttt{bpf/bpf\_helpers} header file, visualised in Figure~\ref{fig:syscall_rawtp_flow}.
 
 A tracepoint is a static instrumentation marker inserted into code that lets tracing 
 tools collect runtime diagnostics or performance data without altering program 
@@ -157,13 +174,13 @@ system call.
 
     \end{tikzpicture}
     \caption{Simplified system call Execution Flow with raw\_tp/sys\_enter Tracepoint}
-    \label{fig:system call_rawtp_flow}
+    \label{fig:syscall_rawtp_flow}
 \end{figure}
 
 These system call-specific tracepoints make the syscall's arguments available to the 
 \ac{bpf} program attached to the tracepoint in a type-safe way. However, these user-
 friendly system call-specific tracepoints do not fulfil the design requirements for \af 
-as it will not execute \textbf{for every system call}. Therefore, we elected to use a
+as it will not execute for every system call. Therefore, we elected to use a
 raw tracepoint.
 
 The \texttt{sys\_enter} raw tracepoint is executed on every system call before the
@@ -217,9 +234,9 @@ need to apply our filter to the current system call and implement fork following
 
 Fork following is the idea that we should apply our filter to any children of a
 filtered process. That is, if we apply a filter to an app and it forks/execs,
-the child process should \textbf{inherit the same filter}. This idea was
+the child process should inherit the same filter. This idea was
 presented in Section \ref{subsec:design-fork-following} and was designed to rely
-on a \textbf{follow map} and the \ac{pid}/parent \ac{pid} of the calling
+on a follow map and the \ac{pid}/parent \ac{pid} of the calling
 process.
 
 We created a ``follow'' map using a \texttt{BPF\_MAP\_TYPE\_HASH} which mapped
@@ -229,12 +246,12 @@ structure containing process information) obtained by calling the
 \texttt{bpf\_get\_current\_task\_btf()} helper function. 
 
 On each system call, we check to see if the calling \ac{pid} is present in the
-``follow'' map using the \texttt{bpf\_map\_lookup\_elem()} helper. If it is, we continue 
-on in the program. If it is not, we check to see if the parent \ac{pid} is
-present in the map. If neither \acp{pid} are present, then we return from the
-program with an error code of 0. Otherwise, we use
-\texttt{bpf\_map\_insert\_elem()} to add the calling \ac{pid} to the 
-``follow'' map.
+``follow'' map using the \ac{bpf} helper function \texttt{bpf\_map\_lookup\_elem()}.
+If it is, we continue  on in the program. If it is not, we check to see if
+the parent \ac{pid} is present in the map. If neither \acp{pid} are present, then
+we return from the program with an error code of 0. Otherwise, we
+use \texttt{bpf\_map\_insert\_elem()} to add the calling \ac{pid} to
+the  ``follow'' map.
 
 \subsubsection{Finding the system call Site}\label{subsec:impl-syscall-site}
 
@@ -288,7 +305,7 @@ Having considered these alternatives, we decided on a much simpler
 implementation. Our solution to speed up identifying whether return pointers
 belong to \ac{libc} is to cache \acg{libc} start and end pointer in \iac{bpf}
 map which we call the \texttt{libc\_ranges} map. In 
-Section~\ref{subsec:assumptions} we assume that the  \ac{libc} address space 
+Section~\ref{subsec:objs-assumpions-tm} we assume that the  \ac{libc} address space 
 will be contiguous and will not change during program execution. Therefore, we
 do not need to build in any logic to deal with cache invalidation.
 
@@ -370,11 +387,11 @@ identify which bit in the byte we must look at. If the value of the bit
 corresponding to the system call number is $1$, then the syscall is allowed and we
 return with exit code 0. Otherwise, we intervene.
 
-\subsubsection{Intervening}\label{subsubsec:impl-intervening}
+\subsubsection{Intervening on Disallowed System Calls}\label{subsubsec:impl-intervening}
 
 The user can choose between three intervention policies for when a
 non-whitelisted system call is made, as specified in 
-Section~\ref{subsec:requirements}. These are to warn the user, kill the
+Section~\ref{subsec:objs-assumpions-tm}. These are to warn the user, kill the
 malicious process, or kill all processes in the ``follow'' map.
 
 To support these configurable modes, we used a \texttt{BPF\_MAP\_TYPE\_ARRAY}
@@ -400,7 +417,9 @@ userspace. This procedure is visualised in Figure~\ref{fig:intervention-flowchar
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8 \linewidth]{./diagrams/profiling-flow.drawio.pdf} 
-\caption{Flowchart illustrating the intervention strategies based on the configured mode when a non-whitelisted system call occurs. Actions are separated into BPF (Kernel) and Frontend (Userspace) lanes.}
+\caption{Flowchart illustrating the intervention strategies based on the
+configured mode when a non-whitelisted system call occurs. Actions are separated
+into BPF (Kernel) and Frontend (User Space) lanes.}
 \label{fig:intervention-flowchart}
 \end{figure}
 
@@ -447,7 +466,7 @@ of a ringbuffer.
 To aid observability when debugging, we also implemented some extra features
 on top of the aforementioned \textit{verbose} mode.
 
-\subsubsection{Logging}
+\subsubsection{Logging}\todo{cut if need}
 
 A \textit{DEBUG} mode,
 which prints execution info \textbf{from \ac{bpf}} to the
@@ -481,69 +500,7 @@ is discarded. This process is visualised in Figure~\ref{fig:profiling-data-flow}
 
 \begin{figure}[hbpt]
 \centering
-\begin{tikzpicture}[
-    node distance=1cm and 1.5cm, % Vertical and horizontal spacing
-    auto,
-    % Define node styles
-    process/.style={ % Main process steps
-        rectangle, 
-        draw, 
-        thick,
-        text centered, 
-        rounded corners, 
-        minimum height=2em, 
-        minimum width=8em,
-        fill=blue!10, % Light blue fill for regular steps
-        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt} % Subtle shadow
-    },
-    decision/.style={ % Decision point (error check)
-        diamond, 
-        draw, 
-        thick, 
-        text centered, 
-        aspect=2, 
-        minimum size=1cm,
-        inner sep=0pt,
-        fill=orange!30, % Orange highlight for decision
-        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt}
-    },
-    io/.style={ % Input/Output (like the final CSV)
-        rectangle, % Changed from cylinder for minimalism, keeping a distinct color
-        draw,
-        thick,
-        text centered,
-        rounded corners,
-        minimum height=2em,
-        minimum width=8em,
-        fill=green!20, % Green highlight for final output
-        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt}
-    },
-    arrow/.style={ % Arrow style
-        -{Latex[length=2mm, width=1.5mm]}, % Nicer arrow head
-        thick
-    }
-]
-
-% Define nodes
-\node (gather) [process] {Gather profile info during execution};
-\node (check) [decision, below=of gather] {Error occurred?};
-\node (write_rb) [process, below left=1cm and 0.5cm of check] {Write to ringbuffer}; % Adjusted positioning
-\node (read_fe) [process, below=of write_rb] {Read on frontend};
-\node (calc_diff) [process, below=of read_fe] {Calculate diffs};
-\node (write_csv) [io, below=of calc_diff] {Write to exec-profile.csv};
-
-% Define connections (arrows)
-\draw [arrow] (gather) -- (check);
-\draw [arrow] (check) -- node[anchor=south east, xshift=-2mm] {No} (write_rb);
-% The "Yes" path implicitly leads to discarding, so we don't draw an explicit "Discard" box for minimalism
-\draw [arrow] (check) -- node[anchor=south west, xshift=2mm] {Yes (Discard)} ++(2.5,0) coordinate(discard_point); % Arrow points right, implies discard
-\node[right=0.2cm of discard_point, text=red!80!black] {}; % Add invisible node to push text right if needed, or keep simple
-
-\draw [arrow] (write_rb) -- (read_fe);
-\draw [arrow] (read_fe) -- (calc_diff);
-\draw [arrow] (calc_diff) -- (write_csv);
-
-\end{tikzpicture}
+\includegraphics[width=\textwidth]{./diagrams/profiling-flow-actual.drawio.pdf}
 \caption{A flowchart showing how profiling data is written to and parsed by
 userspace.}
 \label{fig:profiling-data-flow}
@@ -575,140 +532,7 @@ functionality is provided in Figure~\ref{fig:frontend-flowchart}.
 
 \begin{figure}[h]
 \centering
-\scalebox{0.5}{%
-\begin{tikzpicture}[
-    node distance=1.2cm and 1.5cm, % Vertical and horizontal spacing
-    auto,
-    % Define node styles
-    base_style/.style={ % Base style for consistency
-        draw, thick, text centered, rounded corners,
-        drop shadow={opacity=0.4, shadow xshift=1pt, shadow yshift=-1pt},
-        align=center, inner sep=4pt % Added padding
-    },
-    process/.style={ % Standard process steps
-        base_style, rectangle, minimum height=2.8em, minimum width=11em,
-        fill=blue!10
-    },
-    decision/.style={ % Decision points
-        base_style, diamond, aspect=1.8, minimum size=1cm,
-        fill=orange!30
-    },
-    io/.style={ % Input/Output steps
-        base_style, trapezium, trapezium left angle=70, trapezium right angle=110, % Input/Output shape
-        minimum height=2.8em, minimum width=10em,
-        fill=cyan!10
-    },
-    action/.style={ % Specific actions like killing/logging
-        base_style, rectangle, minimum height=2.8em, minimum width=11em,
-        fill=green!20
-    },
-    parallel/.style={ % For background tasks (goroutine)
-        base_style, rectangle, dashed, draw=blue, fill=blue!5,
-        minimum width=12em
-    },
-    startstop/.style={ % For start/end points
-        base_style, cloud, cloud puffs=15, cloud puff arc=120, aspect=2,
-        minimum height=2.5em,
-        fill=gray!20
-    },
-    arrow/.style={ % Arrow style
-        -{Latex[length=2.5mm, width=2mm]}, % Slightly larger arrow head
-        thick
-    },
-    comment/.style={ % Style for annotations
-        font=\tiny\itshape, text=gray!80!black
-    }
-]
-
-% --- Nodes ---
-\node (start) [startstop] {Start Frontend};
-\node (cli) [io, below=of start] {Parse CLI Args \& Flags\\(Executable, Whitelist, Mode)};
-\node (init_maps) [process, below=of cli] {Initialize BPF Maps\\(Load Whitelists)};
-\node (set_cfg) [process, below=of init_maps] {Set 'cfg\_map' in BPF\\based on flags};
-\node (check_mode) [decision, below=of set_cfg] {Warn or\\Kill-All mode?};
-
-% Branch for Goroutine
-\node (spawn_listener) [parallel, below left=1.5cm and 0.2cm of check_mode] {Spawn Goroutine:\\Listen on Ringbuffer};
-
-% Node to prepare spawning (common path)
-\node (prep_spawn) [process, below right=1.5cm and 0.2cm of check_mode] {Prepare to Spawn Executable};
-
-% Coordinate to join paths after decision
-\node (join_spawn) [coordinate, below=1cm of prep_spawn] {};
-
-% Main execution flow after decision
-\node (do_spawn) [process, below=0.5cm of join_spawn] {Spawn Target Executable\\(via os/exec, get Context)};
-\node (deprivilege) [process, below=of do_spawn] {Deprivilege Spawned Process\\(Set UID to non-root)};
-\node (get_pid) [process, below=of deprivilege] {Get PID of Spawned Process};
-\node (find_libc) [process, below=of get_pid] {Find libc Address Range\\(/proc/PID/maps + Retries)};
-\node (populate_libc) [process, below=of find_libc] {Populate 'libc\_ranges' Map};
-\node (add_follow) [process, below=of populate_libc] {Add PID to 'follow\_map'\\(Activates filtering)};
-
-\node (wait_exit) [process, below=of add_follow, minimum height=3.5em] {Wait for Events:\\(Process Exit, Signal, Error)\\via Context.Done()};
-
-% Parallel Ringbuffer Handling (visualized separately)
-% \node (handle_ringbuf) [parallel, right=4cm of wait_exit, yshift=-1cm] {Goroutine (if active):\\Read Ringbuffer};
-% \node (log_or_kill) [action, below=of handle_ringbuf] {If packet received:\\Log Event (Warn) or\\Kill Mapped PIDs (Kill-All)};
-
-\node (handle_ringbuf) [parallel, left=4cm of wait_exit, yshift=+1cm] {
-  Goroutine (if active):\\Read Ringbuffer
-};
-\node (log_or_kill) [action, below=of handle_ringbuf] {
-  If packet received:\\Log Event (Warn) or\\Kill Mapped PIDs (Kill-All)
-};
-
-% Exit path
-\node (cancel_ctx) [process, below=of wait_exit] {Event Occurs:\\Cancel Context};
-\node (cleanup) [process, below=of cancel_ctx] {Goroutines Receive Done Signal,\\Perform Cleanup};
-\node (stats) [io, below=of cleanup] {Optional: Read 'stats\_map'\\Dump to stdout (if --verbose)};
-\node (end) [startstop, below=of stats] {End Frontend\\(Kernel auto-cleans maps/progs)};
-
-% --- Arrows ---
-\draw [arrow] (start) -- (cli);
-\draw [arrow] (cli) -- (init_maps);
-\draw [arrow] (init_maps) -- (set_cfg);
-\draw [arrow] (set_cfg) -- (check_mode);
-
-% Branching arrows
-\draw [arrow] (check_mode.west) -- node[midway, above left, pos=0.7] {Yes} (spawn_listener);
-\draw [arrow] (check_mode.east) -- node[midway, above right, pos=0.7] {No} (prep_spawn);
-
-% Joining paths before spawning
-% Use |- or -| for right-angle turns if needed, or direct connection
-\draw [arrow] (spawn_listener) -- (spawn_listener |- join_spawn) -- (join_spawn); % Path from listener to join point
-\draw [arrow] (prep_spawn) -- (join_spawn); % Path from no-listener branch
-
-% Main flow arrows
-\draw [arrow] (join_spawn) -- (do_spawn);
-\draw [arrow] (do_spawn) -- (deprivilege);
-\draw [arrow] (deprivilege) -- (get_pid);
-\draw [arrow] (get_pid) -- (find_libc);
-\draw [arrow] (find_libc) -- (populate_libc);
-\draw [arrow] (populate_libc) -- (add_follow);
-\draw [arrow] (add_follow) -- (wait_exit);
-
-% Exit flow arrows
-\draw [arrow] (wait_exit) -- (cancel_ctx);
-\draw [arrow] (cancel_ctx) -- (cleanup);
-\draw [arrow] (cleanup) -- (stats);
-\draw [arrow] (stats) -- (end);
-
-% Arrows related to parallel goroutine
-% Dashed arrow indicates it runs alongside the main wait state
-% \draw [arrow, dashed] (spawn_listener) -- (handle_ringbuf) node[midway, above, sloped, comment] {Runs in Parallel};
-% \draw [arrow] (handle_ringbuf) -- (log_or_kill);
-
-\draw [arrow, dashed] (spawn_listener) -- (handle_ringbuf)
-  node[midway, above, sloped, comment] {Runs in Parallel};
-\draw [arrow] (handle_ringbuf) -- (log_or_kill);
-
-% Dashed red arrow shows context cancellation signal stopping the goroutine
-% \draw [arrow, red, dashed] (cancel_ctx.west) -| (handle_ringbuf.east) node[midway, below right, comment, text=red] {Context Cancelled};
-\draw [arrow, red, dashed] (cancel_ctx.west) |- (handle_ringbuf.east)
-  node[midway, above left, comment, text=red] {Context Cancelled};
-
-\end{tikzpicture}
-}
+\includegraphics[width=\textwidth]{./diagrams/frontend-flow.drawio.pdf}
 \caption{Overview Flowchart of the Go Frontend Execution Logic.}
 \label{fig:frontend-flowchart}
 \end{figure}
@@ -763,8 +587,6 @@ does not protect the filtered application}.
 
 \subsubsection{Spawning the executable} \label{subsubsec:spawning-exec}
 
-\todo{I've oversimplified the capabilities here a bit - should I be more
-detailed?}
 To spawn the executable, we use the \texttt{os/exec} package from the Go
 standard library to create a \texttt{Command} with the executable and arguments
 passed in through the \ac{cli}. This was done with the \texttt{CommandContext()}
@@ -781,7 +603,7 @@ executable via an \texttt{execve} system call (\texttt{Command.Start} uses
 \texttt{execve} behind the scenes), the filtered process will also inherit the
 \texttt{CAP\_SYS\_ADMIN} privileges.
 
-Our threat model (Section \ref{subsec:threat-model}) assumed that an attacker
+Our threat model (Section \ref{subsec:objs-assumpions-tm}) assumed that an attacker
 had compromised the filtered application. If the filtered application had
 \texttt{CAP\_SYS\_ADMIN} privileges, then an attacker might be able to change
 information in the \ac{bpf} maps that \af relies on and evade filtering. If an
@@ -851,15 +673,12 @@ a signal on the \texttt{Context.Done()} channel, and therefore all goroutines
 exit and all resources are closed.
 
 \ac{bpf} maps are cleared by default when the process which mounted them exits,
-as we did not \textbf{pin the maps} (make the maps persist). Similarly, the \af
+as we did not \textit{pin the maps} (make the maps persist). Similarly, the \af
 program will be automatically removed from the \texttt{raw\_tp/sys\_enter}
 tracepoint.
 
 When running in \texttt{--verbose} mode, the frontend will read the contents of
 the stats map before exiting and dump its contents to \ac{stdout} as JSON.
-
-\subsection{Limitations}
-\todo{A limitations section (maybe)}
 
 % Need PID to start filtering: ~1 second where filter is inactive
 % Requires dynamically linked binaries
@@ -926,19 +745,13 @@ and flattened the (\afss)~ whitelist passed to \texttt{af-seccomp} via the
 \ac{cli}, and added an \texttt{libseccomp.Allow} rule for each system call number in
 the whitelist.
 
-\todo{how to justify the \texttt{syso} design decisions? they are silly because
-    I did them first when I was unwise!}
-
 \subsubsection{Calculating Privilege Reduction}
 
 To calculate the level privilege reduction gained by using \af we implemented a
 tool called \texttt{syso}. It is an evaluation tool which uses dynamic analysis
 to track which shared libraries are making which system calls. It does
 stack-unwinding in kernel, and aligns the addresses with values in
-\texttt{/proc/PID/maps}. \texttt{syso} also counts the numbers of each system call 
-made as this was hypothesised to be a good indicator of how much runtime cost
-\af will incur. This is discussed further in Section \todo{forward reference slowdown
-with system call count}.
+\texttt{/proc/PID/maps}. 
 
 When execution finishes, \texttt{syso} writes a report to \ac{stdout} with three
 figures: the privilege score of the application filtered with seccomp, the
