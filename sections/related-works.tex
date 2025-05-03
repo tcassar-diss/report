@@ -8,17 +8,16 @@ impacts on a diverse set of benchmarks, we turn our attention to discussing how
 
 System call filtering first appeared in literature in the 1990s with seminal
 works like \textcite{wagner1999janus}, and leveraged
-user space techniques \cite{somayaji2000automated, garfinkel2004ostia}. This made
-system call filtering slow, needing costly world switches to run the filtering
-logic in user space.
+user space techniques \cite{somayaji2000automated, garfinkel2004ostia}. The world-switching associated with a user-space solution made
+system call filtering too slow for production use.
 
 System call filtering was added to the Linux Kernel in 2005 by Andrea Arcangeli, but
-saw slow adoption with Linus Torvalds asking if anyone actually used seccomp in
+saw slow adoption with Linus Torvalds asking if anyone used seccomp in
 2009 \cite{arcangeli_seccomp_2005, TORVALDS_ANYONE_USES_SECCOMP}. Seccomp was
 faster than the research prototypes from the early 2000s as it used in-kernel
 filtering logic \cite{jia2023programmablesecurityebpf}.
 
-In the interim 16 years, system call filtering has become increasingly common.
+In the past 16 years, system call filtering has become increasingly common.
 Seccomp is the industry standard and is now widely supported. Chromium, OpenSSH,
 Qemu, Docker, Android, Package Managers, and emulation tooling all run with
 seccomp filters.
@@ -35,24 +34,23 @@ precise filters are applied to an application
 \textit{temporal}: different filters are applied to the same application at
 different points in time \cite{SYSPART, TEMPORAL_SPEC}. Temporal syscall
 filters rely on accurate phase detection, and any misidentification or delay
-in switching filters can create brief but exploitable windows where security
+switching filters can create brief but exploitable windows where security
 policies are not fully enforced. 
 
 SysPart \cite{SYSPART} heavily inspired \af as it also
-looks at fine grained system call filtering. SysPart focuses on \textit{temporal
+looks at fine-grained system call filtering. SysPart focuses on \textit{temporal
 separation} - an application is split into two phases, setup and steady-state.
 \af, in contrast, defines \textit {spatial separation}, applying different
 filters to different parts of the address space. Temporal separation is an
 idea which predates SysPart, proposed by \textcite{TEMPORAL_SPEC}, who note that
 the temporal filtering scope is primarily limited to servers as server
-application often exhibit different startup and steady state behaviour. 
+applications often exhibit different startup and steady-state behaviour. 
 
 FreePart \cite{ahad2023freepart} is another isolation tool that applies
-system call filters based on temporal specialization. Designed for data
-processing applications, it observes that privileges, including system calls,
-often align with the specific \acp{api} used during execution. While
-conceptually similar to \af, FreePart differs in two key ways: it goes
-beyond system call filtering, and it dynamically changes filters based on
+system call filters based on temporal specialisation. It observes that privileges, including system calls, are designed for data processing applications
+and often align with the specific \acp{api} used during execution. While
+conceptually similar to \af, FreePart differs in two ways: it goes
+beyond system call filtering and dynamically changes filters based on
 the program's execution phase. \af, however, is a spatially scoped filtering
 model, applying distinct system call whitelists to file-backed memory regions.
 We enable per-library privilege enforcement rather than relying on execution 
@@ -61,7 +59,7 @@ phase.
 SysXCHG \cite{SYSXCHG} also implements fine-grained filtering by changing
 filters at runtime. SysXCHG does not use a temporal separation model and instead
 focuses on subprocesses. Seccomp (and \af) \textit{pass down} filters from
-parent to child processes, which means that whitelists must be permissive enough
+parent to child processes, meaning whitelists must be permissive enough
 to cover both the parent and child processes. SysXCHG replaces the child
 process's filter, allowing it to be \textit{more precise} than a filter which
 must cover both processes.
@@ -70,13 +68,13 @@ must cover both processes.
 
 While orthogonal to our work, whitelist generation remains a key part of
 effective system call filtering solutions. Recall that we used \texttt{afgen} -
-a dynamic analysis based tool - to generate \af whitelists, as no current
-tooling is able to generate per-shared library whitelists. This is a limitation
+a dynamic analysis-based tool - to generate \af whitelists, as no current
+tooling can generate per-shared library whitelists. This is a limitation
 of our current approach, so we investigate some work in static analysis
 whitelist generation.
 
 Dynamic-analysis whitelist generation is a limitation because dynamic analysis
-is not guaranteed to find all possible system calls that an application may
+cannot find all possible system calls that an application may
 make. This may lead to a false positive at runtime, and a production application
 may be killed illegitimately \cite{XING2022105}. 
 
@@ -91,13 +89,13 @@ generator will make \af more production-ready.
 
 Software compartmentalisation is a form of defensive programming where an
 application is decomposed into different \textit{compartments}, each isolated
-from one another \cite{SOK}. Furthermore, compartments communicate over a
+from one another \cite{SOK}. Furthermore, compartments communicate over
 well-defined, secure interfaces \cite{CONFFUZZ}. Therefore, attackers who
-compromise a compartment are confined to it, limiting the damage that they can
-cause the overall system.
+compromise a compartment are confined to it, limiting the damage they can
+cause to the overall system.
 
 As referenced in Section~\ref{subsec:objs-assumpions-tm}, \af presupposes that some
-form of compartmentalisation which will prevent an attacker from branching to
+form of compartmentalisation, which will prevent an attacker from branching to
 another place in the process's \ac{vma} as is in place. The CHERI capability
 model \cite{CHERI} is a \textit{capability} model which extends the 64-bit MIPS
 \ac{isa}\footnote{This means that it is incompatible with \af as \af
@@ -105,15 +103,15 @@ currently only supports the x86 \ac{isa}.}, and can stop an attacker from moving
 \ac{vma} at will. 
 
 System call filtering has been applied to \ac{pku} based applications as with
-Jenny \cite{JENNY}. Jenny is system call filtering system looking to address
-the security concerns with present with system calls issued from
+Jenny \cite{JENNY}. Jenny is a system call filtering tool that addresses
+the security concerns with system calls issued from
 \ac{pku}-protected processes. \acp{pku} are a hardware isolation primitive that
 effectively provide \textit{data sandboxing} (but do not prevent attackers
-executing code from other parts of the address space, making them unsuitable for
+from executing code from other parts of the address space, making them unsuitable for
 \af).
 
 Finally, it is worth noting that \af itself falls under the umbrella of software
-compartmentalisation research, as \af enables programs to run in accordance with
+compartmentalisation research, as \af, enables programs to run per
 the \ac{polp} \cite{SALTZER_SCHROEDER}.
 
 \subsection{\ac{bpf} in Security}\label{subsec:bpf-in-security}
@@ -126,7 +124,7 @@ lead to an exploit in kernel \cite{BPF_PACKET_MITIGATION}. Integration with \ac
 \cite{StarovoitovBPFSecurity}, which shows there is precedent for using \ac{bpf}
 as security tooling. 
 
-seccompBPF  is an extension of the existing seccomp which can define a custom
+seccompBPF  is an extension of the existing seccomp, which can define a custom
 system call filter in terms of a \ac {bpf} program \cite{seccompBPF,
 jia2023programmablesecurityebpf}. Modern \ac{bpf} specific security frameworks 
 such as Cilium \cite{cilium2025}, Falco\cite{falco2025}, and Tetragon 
