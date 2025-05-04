@@ -359,3 +359,53 @@ taken. perform-filtering is 0 as no syscalls were filtered during this run.}
     linenos]{text}{./listings/nbp/suite.def}
 \end{listing}
 
+
+\section{Profiling Flame Graphs}
+
+\subsection{Postgres}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{./evaluation-artefacts/results/profiling/postgres-prof_time_breakdown_sampled_clipped.pdf}
+    \caption{A stacked bar chart showing the profile of Postgres (in nanoseconds) \af
+    spent in each phase of filtering.}
+    \label{fig:postgres-profile}
+\end{figure}
+
+
+\subsection{Redis}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{./evaluation-artefacts/results/profiling/redis-server-prof_time_breakdown_sampled_clipped.pdf}
+    \caption{A stacked bar chart showing the profile of Redis (in nanoseconds) \af
+    spent in each phase of filtering.}
+    \label{fig:redis-profile}
+\end{figure}
+
+
+\subsection{Nginx}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{./evaluation-artefacts/results/profiling/nginx-prof_time_breakdown_clipped.pdf}
+    \caption{A stacked bar chart showing the profile of Nginx (in nanoseconds) \af
+    spent in each phase of filtering.}
+    \label{fig:nginx-profile}
+\end{figure}
+
+\subsection{\texttt{fio}}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{./evaluation-artefacts/results/profiling/fio-prof_time_breakdown_sampled_clipped.pdf}
+    \caption{A stacked bar chart showing the profile of \texttt{fio} (in nanoseconds) \af
+    spent in each phase of filtering.}
+    \label{fig:fio-profile}
+\end{figure}
+
+\subsection{NPB (./bt.C.x)}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{./evaluation-artefacts/results/profiling/bt.C.x-prof_time_breakdown_sampled_clipped.pdf}
+    \caption{A stacked bar chart showing the profile of ./bt.C.x microbenchmark
+      from \ac{npb} (in nanoseconds) \af
+    spent in each phase of filtering.}
+    \label{fig:npb-profile}
+\end{figure}
