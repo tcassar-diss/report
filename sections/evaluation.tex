@@ -810,19 +810,19 @@ expect to see when using \af.
 
 To understand the source of the performance variations observed across the
 benchmarks, we analysed profiling data gathered from \af's filtering logic,
-(seeSection~\ref{subsubsec:impl-find-site-opt}). We compare the time spent in
+(see Section~\ref{subsubsec:impl-find-site-opt}). We compare the time spent in
 each execution stage of the core filtering logic across applications to
 understand why some apps had more performance overhead than others.
 
 We gathered profiles from each application, removed outliers (defined as
-$\pm1.5\times$ \ac{iqr}). We then took the mean time spent in each stage of
-filtering and visualise the results in Figure~\ref{fig:profile-means}.
-Individual flame graphs for each benchmark are provided in
-Appendix~\ref{apx:flame-graphs}.
+$\pm1.5\times$ \ac{iqr}), and took a random sample of 1,000 system calls. 
+Figure~\ref{fig:profile-means} shows the mean time spent in each stage of
+filtering in nanoseconds. Individual flame graphs for each benchmark are 
+provided in Appendix~\ref{apx:flame-graphs}.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\linewidth]{./evaluation-artefacts/results/profiling/mean_stacked_horizontal_comparison.pdf}
+    \includegraphics[width=\linewidth]{./evaluation-artefacts/results/profiling/mean_stacked_horizontal_comparison.pdf}
     \caption{A stacked bar chart showing the average time (in nanoseconds) \af
     spent in each phase of filtering.}
     \label{fig:profile-means}
@@ -834,4 +834,26 @@ other benchmarks (around 2000ns), and Nginx's significantly slower (almost
 system call intensive. Postgres, \texttt{fio} and the \texttt{bt.C.x} \ac{npb}
 microbenchmark each took around 5000ns on average to process a system call.
 
-\todo{why is redis so much shorter?}
+Redis seems to see the greatest time saving in the system call site
+identification, which is where stack unwinding occurs. We hypothesise that Redis
+may have shallower stacks than the other applications tested here. This would
+imply that we reach the bottom of the stack before all 16 frames are pulled
+(Section~\ref{subsec:impl-syscall-site}) and explains a significant portion of the 
+speedup.
+
+\af takes proportionally longer to decide whether to filter Nginx's processes
+and apply fork following than the other benchmarks. This could be because we
+stressed Nginx's concurrency -- as mentioned, Nginx forks on receiving a
+request. More forks could mean more fork following operations, which mean lots
+of writes to a (synchronised) \ac{bpf} map.
+
+We observe that \ac{npb} and \texttt{fio} took a similar time to Postgres
+despite seeing no performance overhead in testing. This is because 
+\texttt{fio} and \ac{npb} tests simply made far fewer system calls: 84,374 over
+30 seconds and 64,791 over 38 seconds respectively, compared to 3,028,544 made 
+by Postgres in 30 seconds.
+
+Further verification work, for example logging the number of stack frames
+per unwinding operation to test the Redis hypothesis, is needed. 
+Additionally, performance engineering efforts could potentially reduce some of the
+overheads reported, particularly for applications like Nginx and Postgres.
