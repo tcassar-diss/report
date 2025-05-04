@@ -171,19 +171,6 @@
     collection = {RAID ‚Äô24},
 }
 
-@online{BPF_LOOP_COMMIT,
-    author = {The Linux Kernel Community},
-    title = {bpf: Add bpf\_loop helper},
-    year = {2024},
-    month = {3},
-    day = {12},
-    url = {
-           https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e6f2dd0f80674e9d5960337b3e9c2a242441b326
-           },
-    urldate = {2025-03-31},
-    note = {Commit e6f2dd0, Linux kernel Git repository},
-}
-
 @online{BPF_VERIFIER_EXPLOIT,
     author = {Google Bug Hunters},
     title = {A Deep Dive into CVE-2023-2163: How We Found and Fixed an eBPF
@@ -1146,62 +1133,134 @@
 }
 
 @online{rice_fastabend_ebpf_turing_2024,
-  author    = {Liz Rice and John Fastabend},
-  title     = {eBPF: Yes, it’s Turing Complete!},
-  year      = {2024},
-  month     = sep,
-  url       = {https://isovalent.com/blog/post/ebpf-yes-its-turing-complete/},
-  urldate   = {2025-05-04},
-  note      = {Accessed: 2025-05-04}
+    author = {Liz Rice and John Fastabend},
+    title = {eBPF: Yes, it’s Turing Complete!},
+    year = {2024},
+    month = sep,
+    url = {https://isovalent.com/blog/post/ebpf-yes-its-turing-complete/},
+    urldate = {2025-05-04},
+    note = {Accessed: 2025-05-04},
 }
 
 @inbook{LAMPORT_CLOCKS,
-author = {Lamport, Leslie},
-title = {Time, clocks, and the ordering of events in a distributed system},
-year = {2019},
-isbn = {9781450372701},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3335772.3335934},
-booktitle = {Concurrency: The Works of Leslie Lamport},
-pages = {179–196},
-numpages = {18}
+    author = {Lamport, Leslie},
+    title = {Time, clocks, and the ordering of events in a distributed system},
+    year = {2019},
+    isbn = {9781450372701},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3335772.3335934},
+    booktitle = {Concurrency: The Works of Leslie Lamport},
+    pages = {179–196},
+    numpages = {18},
 }
 
 @online{flatpak_seccomp_profile,
-  author    = {{Flatpak Project Contributors}},
-  title     = {flatpak-docker-seccomp.json — Flatpak Seccomp Profile},
-  year      = {2025},
-  url       = {https://github.com/flatpak/flatpak/blob/main/data/flatpak-docker-seccomp.json},
-  urldate   = {2025-05-04},
-  note      = {Accessed: 2025-05-04}
+    author = {{Flatpak Project Contributors}},
+    title = {flatpak-docker-seccomp.json — Flatpak Seccomp Profile},
+    year = {2025},
+    url = {
+           https://github.com/flatpak/flatpak/blob/main/data/flatpak-docker-seccomp.json
+           },
+    urldate = {2025-05-04},
+    note = {Accessed: 2025-05-04},
 }
 
 @online{openssh60,
-  author    = {{OpenSSH Project}},
-  title     = {OpenSSH 6.0 Release Notes},
-  year      = {2012},
-  month     = apr,
-  url       = {https://www.openssh.com/txt/release-6.0},
-  urldate   = {2025-05-04},
-  note      = {Accessed: 2025-05-04}
+    author = {{OpenSSH Project}},
+    title = {OpenSSH 6.0 Release Notes},
+    year = {2012},
+    month = apr,
+    url = {https://www.openssh.com/txt/release-6.0},
+    urldate = {2025-05-04},
+    note = {Accessed: 2025-05-04},
 }
 
 @manual{tensorflow2015,
-  title        = {TensorFlow: Large-scale machine learning on heterogeneous systems},
-  author       = {{Martín Abadi} and {Ashish Agarwal} and {Paul Barham} and {Eugene Brevdo} and {Zhifeng Chen} and {et al.}},
-  organization = {Google Brain Team},
-  year         = {2015},
-  note         = {Software available from https://www.tensorflow.org},
-  url          = {https://www.tensorflow.org},
-  urldate      = {2025-05-04}
+    title = {TensorFlow: Large-scale machine learning on heterogeneous systems},
+    author = {{Martin Abadi} and {Ashish Agarwal} and {Paul Barham} and {Eugene
+              Brevdo} and {Zhifeng Chen} and {et al.}},
+    organization = {Google Brain Team},
+    year = {2015},
+    note = {Software available from https://www.tensorflow.org},
+    url = {https://www.tensorflow.org},
+    urldate = {2025-05-04},
 }
 
 @article{opencv_library,
-  author  = {Gary Bradski},
-  title   = {The OpenCV Library},
-  journal = {Dr. Dobb's Journal of Software Tools},
-  year    = {2000},
-  url     = {https://opencv.org},
-  urldate = {2025-05-04}
+    author = {Gary Bradski},
+    title = {The OpenCV Library},
+    journal = {Dr. Dobb's Journal of Software Tools},
+    year = {2000},
+    url = {https://opencv.org},
+    urldate = {2025-05-04},
+}
+
+@inproceedings{zhou2023userspace,
+    title = {Userspace Bypass: Accelerating Syscall-intensive Applications},
+    author = {Zhou, Zhe and others},
+    booktitle = {Proceedings of the 17th USENIX Symposium on Operating Systems
+                 Design and Implementation (OSDI 2023)},
+    year = {2023},
+    url = {https://www.usenix.org/system/files/osdi23-zhou-zhe.pdf},
+    urldate = {2025-05-04},
+}
+
+@online{LTPFailDocs,
+    author = {{Linux Test Project}},
+    title = {Test Catalog: process-vm-readv02},
+    year = {2025},
+    url = {
+           https://linux-test-project.readthedocs.io/en/latest/users/test_catalog.html
+           },
+    note = {Accessed: 2025-05-04},
+}
+
+@online{perfEventOpen2,
+    author = {{The Linux man-pages project}},
+    title = {perf event open(2) --- Linux manual page},
+    year = {2025},
+    url = {https://man7.org/linux/man-pages/man2/perf_event_open.2.html},
+    note = {Accessed: 2025-05-04},
+}
+
+@online{semctl2,
+    author = {{The Linux man-pages project}},
+    title = {semctl(2) --- Linux manual page},
+    year = {2025},
+    url = {https://man7.org/linux/man-pages/man2/semctl.2.html},
+    note = {Accessed: 2025-05-04},
+}
+
+@article{aslr_entropy,
+    author = {Marco-Gisbert, Hector and Ripoll, Ismael},
+    year = {2019},
+    month = {07},
+    pages = {2928},
+    title = {Address Space Layout Randomization Next Generation},
+    volume = {9},
+    journal = {Applied Sciences},
+    doi = {10.3390/app9142928},
+}
+
+
+@manual{ltpQuickstart,
+    title = {Linux Test Project - Quick Start Guide},
+    author = {{Linux Test Project}},
+    year = {2024},
+    url = {
+           https://linux-test-project.readthedocs.io/en/latest/users/quick_start.html
+           },
+    note = {Accessed: 2025-05-04},
+}
+
+
+@book{von2010ubuntu,
+  title={Ubuntu Linux Bible: Featuring Ubuntu 10.04 LTS},
+  author={von Hagen, W.},
+  isbn={9780470881804},
+  series={Bible},
+  url={https://books.google.co.uk/books?id=rsSlrQLB8-gC},
+  year={2010},
+  publisher={Wiley}
 }

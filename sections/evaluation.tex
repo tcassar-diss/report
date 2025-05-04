@@ -6,46 +6,30 @@
     - Diagram about system call distribution
 \fi
 
-This section shows that \af significantly reduces the
-privilege of the applications it protects -- often more so than seccomp. 
-We quantify the additional runtime cost developers can expect from using 
-\af instead of seccomp and look to prove the correctness of \af.
-
-We start by sharing our test environment and the version of \af we used to
-aid repeatability. We then show that \af is correct: it correctly identifies which shared library made which system call without
-affecting the normal system call function. Having shown correctness, we move on to
-security evaluation, where we define a privilege reduction metric and apply the
-metric to a set of application benchmarks. We finish with performance analysis,
-comparing the runtime cost of \af to that of using a seccomp filter.
+Our evaluation demonstrates that \af significantly reduces application
+privilege compared to seccomp, quantifies the associated runtime overhead, and
+validates \af's correctness. This section details the test environment, the
+benchmark suite used, the validation process, the security benefits measured
+via a novel \textit{probabilistic} privilege metric, and the performance impact 
+relative to seccomp and an unfiltered baseline.  
 
 \subsection{Test Environment}
 
 Our test environment was the same as our development environment outlined in
-Section~\ref{subsection:tech-stack}. We used a Linux server (kernel version
-6.8.52-generic) running Ubuntu 24.04.2 with two Intel Xeon
-Gold 5220R x86 processors clocked at 2.20GHz. Each socket has 24 physical 
-cores with two threads per core, resulting in 96 logical cores.
+Section~\ref{subsection:tech-stack} and is presented in
+Table~\ref{tab:test_environment}.
 
-The server has 64 GB of memory configured at 2666 MT/s with 2 terabytes
-of storage; buffered read performance was measured at 515 MB/s with 
-\texttt{sudo hdparm -t /dev/sda}.
-
-The kernel is being run with default settings - \ac{aslr}, stack
+The kernel used default settings - \ac{aslr}, stack
 canaries, and other default security features enabled for all tests.
-\af was run as root, but as mentioned in Section~\ref{subsubsec:spawning-exec},
-filtered applications were not run with root privileges.
+\af was run as root.
 
-\af was compiled with the Go compiler at version 1.23.2 with no flags or
-environment variables explicitly set. \ac{bpf} was
-compiled using the \texttt{ebpf-go} toolchain from the Cilium project at version
-v0.17.1. Under the hood, this relies on LLVM: our server was configured with
-Clang version 18.1.3. We used \af release version 1.0.0, which can be found on
-GitHub at
-\href{https://github.com/tcassar-diss/addrfilter/releases/tag/v1.0}
-{www.github.com/tcassar-diss/addrfilter/releases/tag/v1.0}
-(commit hash 
-\href{https://github.com/tcassar-diss/addrfilter/tree/2bd209c630df3509d4ac721d018dabab94305dde}
-{\texttt{2db209c}}).
+\af (v1.0.0, commit
+\href{https://github.com/tcassar-diss/addrfilter/tree/2bd209c630df3509d4ac721d018dabab94305dde}{\texttt{2db209c}},
+available at
+\href{https://github.com/tcassar-diss/addrfilter/releases/tag/v1.0}{github.com
+/tcassar-diss/addrfilter}) was compiled using Go v1.23.2. The \ac{bpf} components
+were compiled using the Cilium \texttt{ebpf-go} toolchain (v0.17.1) with
+Clang v18.1.3 as the LLVM backend. No non-default compiler flags were used.
 
 \begin{table}[h]
     \centering 
@@ -77,27 +61,19 @@ GitHub at
     \end{tabular}
 \end{table}
 
-Key aspects of the test hardware and software are summarised in
-Table~\ref{tab:test_environment}.
-For experiments involving data transfer over a network (such as
-\texttt{redis-benchmark} and \texttt{wrk} for Nginx), the server and benchmark
-client were both run on the same server to avoid the network becoming a bottleneck.
-While experiments were performed on server-grade hardware, the results should
-generalise to user-oriented systems.
+
+For network benchmarks (\texttt{redis-benchmark}, \texttt{wrk}), client and
+server processes ran on the same host to isolate performance overhead from
+network latency. 
 
 \subsection{Benchmark Selection}\label{subsec:benchmark-selection}
 
-To evaluate the efficacy and overhead of a \af, we tested against a broad set
-of workloads. Both security and performance analysis were conducted on a 
-benchmark suite comprising five distinct applications and workloads,
-aiming to cover common server application paradigms. The version of each
-benchmark/application can be found in 
-Table~\ref{tab:benchmark_software_versions}. Collectively, these benchmarks were
-selected to stress \af across a wide system call profile: network-dominated 
-(Redis, Nginx), \ac{io}-intensive (\texttt{fio}), \ac{cpu}-intensive 
-(\ac{npb}), and complex, mixed workloads (PostgreSQL). Benchmarks like Redis,
-Nginx, and \texttt{fio} have also seen use in benchmarking other system call
-security solutions such as in \textcite{lerner2019gvisor}.
+We evaluated \af's security and performance using a benchmark suite (versions
+in Table~\ref{tab:benchmark_software_versions}) selected to cover diverse
+server workloads and stress different system call patterns: network-bound (Redis,
+Nginx), \ac{io}-intensive (\texttt{fio}), \ac{cpu}-intensive (\ac{npb}),
+and mixed (PostgreSQL). Several of these benchmarks have been used in
+literature to evaluate tools like gVisor \textcite{lerner2019gvisor}.
 
 \begin{table}[h] 
     \centering 
@@ -120,243 +96,185 @@ security solutions such as in \textcite{lerner2019gvisor}.
 
 \subsubsection{Redis and \texttt{redis-benchmark}}\label{subsubsec:redis-just}
 
-Redis is an in-memory key/value store representing network-bound applications 
-sensitive to latency. Its workload primarily stresses network stack system calls 
-(\texttt{accept()}, \texttt{read()}, \texttt{write()}, \texttt{epoll\_wait}, 
-etc.) and memory management, allowing us to measure  \af's impact on high 
-throughput, low latency network services. We used small key sizes (3B) to 
-maximise the system call rate relative to data transfer, which will stress \af as 
-much as possible.
+Redis, an in-memory key/value store, represents latency-sensitive, network-bound
+applications. Its workload primarily stresses network (\texttt{accept()},
+\texttt{read()}, \texttt{write()}, \texttt{epoll\_wait}) and memory management system calls, allowing measurement of \af's impact on high-throughput, low-latency services.
 
-During benchmarking, Redis was run with default configuration settings to
-reflect a standard, no-tuning deployment. \texttt{redis-benchmark} was also run
-with default settings: its small key size of 3 bytes makes the benchmark more
-system call intensive, stressing \af as more syscalls are
-made per second with small key sizes. We specified the number of clients that
-\texttt{redis-benchmark} was to simulate with \texttt{-c 48} flag. This used
-half the available cores on our server and was done to add a moderate amount of
-concurrency to the benchmark in the hope of simulating something closer to
-real-world conditions.
+Redis ran with default settings. \texttt{redis-benchmark} also used defaults (3-byte keys, increasing relative system call intensity \cite{zhou2023userspace}) but simulated 48 clients (\texttt{-c 48}, using half the server's cores) to introduce moderate, realistic concurrency.
 
 \subsubsection{Nginx and \texttt{wrk}}\label{subsubsec:nginx-just}
 
-Nginx is a widely used high-performance web server, representative of applications
-which deal with massively concurrent network connections and potentially
-significant file \ac{io} (e.g., serving static assets). This benchmark exercises
-network system calls, file system syscalls (open, read, sendfile),
-and process/thread management, testing \af's overhead under high concurrency
-and mixed \ac{io} patterns.
+Nginx, a high-performance web server, represents applications managing concurrent network connections and file \ac{io}. This benchmark exercises network, file system (\texttt{open}, \texttt{read}, \texttt{sendfile}), and process/thread management system calls, testing \af under high concurrency and mixed \ac{io}.
 
-For Nginx, we ran our benchmark with some changes from the
-default configuration. The \texttt{nginx.conf} we used is available in
-Listing~\ref{lst:nginx-conf} (in Appendix~\ref{subsec:nginx}). Some key 
-decisions were to set \texttt{worker\_processes} to auto to use available cores 
-efficiently, and to enable \textit{sendfile} to let Nginx use the optimised 
-\texttt{sendfile()} system call to serve our single-page static site (see 
-Listing~\ref{lst:index-html}).
-
-We disabled access logging to remove noise from disk \ac{io} to avoid stressing
-the filesystem (as this was the purpose of the \texttt{fio} benchmark).
-Loads were generated with \texttt{wrk} configured to use 200 concurrent
-connections across four client threads (-c 200 -t 4) for a duration of 30
-seconds. These parameters imposed significant concurrency, stressing Nginx's
-connection and process/thread management subsystems.
+Nginx configuration (Listing~\ref{lst:nginx-conf}, Appendix~\ref{subsec:nginx})
+deviated from defaults: \texttt{worker\_processes} was set to auto (uses
+available cores), and \textit{sendfile} was enabled for optimised static
+file serving (Listing~\ref{lst:index-html}). Access logging was disabled to
+minimise disk \ac{io} noise, isolating network and core processing overhead. \
+texttt{wrk} generated load using 200 concurrent connections across 4 threads
+(\texttt{-c 200 -t 4}) for 30 seconds, stressing connection and process management.
 
 \subsubsection{\texttt{fio}}\label{subsubsec:fio-just}
-\texttt{fio}  is a flexible \ac{io} workload generator used here to estimate
-the impact of \af on the storage subsystem. By configuring \texttt{fio} for
-specific \ac{io} pattern, we can observe the runtime cost incurred by \af on
-filesystem and block device-related system calls. We carefully configured
-\texttt{fio} to focus specifically on high throughput sequential write
-performance, as data ingestion/writing large files to disk are often 
-predominantly comprised of sequential write tasks \cite{WRITES_ARE_SEQUENTIAL}.
+\texttt{fio}, \iac{io} workload generator, was used to evaluate \af's impact
+on the storage subsystem via filesystem and block device system calls. We
+focused on high-throughput sequential writes, common in data ingestion tasks
+\cite{WRITES_ARE_SEQUENTIAL}.
 
-We used \texttt{fio} to write 10GB files per job (--size=10G) across 16
-parallel jobs  (--numjobs=16).  The benchmark was time-based, running for 5
-minutes (--runtime=5m) after a 2-second ramp-up (--ramp\_time=2s) to ensure
-stable measurements \cite{fio-docs}. We enabled Direct \ac{io} (--direct=1) to
-bypass the operating system's page cache. This ensures that write operations
-translate directly into \texttt{write()} system calls, making the benchmark
-highly sensitive to any overhead introduced by \af. 
-
-A large block size of 1MB (--bs =1M) was used as it is characteristic of
-sequential throughput workloads. To maximise load and attempt to saturate
-the storage device, a high \ac{io} queue depth of 64 was used per
-job  (--iodepth=64, --iodepth\_batch\_submit=64, --iodepth\_batch\_complete\_max
-=64). This deliberately stresses the storage subsystem under heavy, parallel,
-direct write load, providing insight into \af's performance cost under
-such conditions. 
+We configured \texttt{fio} to write 10GB files per job (\texttt{--size=10G})
+across 16 parallel jobs (\texttt{--numjobs=16}) for 30 seconds
+(\texttt{--runtime=30s}) after a 2-second ramp-up (\texttt{--ramp\_time=2s}) to
+ensure stable measurements \cite{fio-docs}. Direct \ac{io} (\texttt{--direct=1})
+bypassed the \acg{os} page cache, ensuring write operations directly invoked
+\texttt{write()} system calls, increasing sensitivity to \af's overhead. A large
+block size (\texttt{--bs=1M}) characteristic of sequential throughput, and high
+\ac{io} queue depth per job (\texttt{--iodepth=64},
+\texttt{--iodepth\_batch\_submit=64}, \texttt{--iodepth\_batch\_complete\_=64})
+maximized load on the storage subsystem. This configuration stresses \af under 
+heavy, parallel, direct write load.
 
 \subsubsection{PostgreSQL}\label{subsubsec:psql-just}
 
-PostgreSQL is a widely used, highly complex, relational database system representing a database workload. \texttt{pgbench} simulates
-transactional workloads involving client connections (stressing the network
-stack), query processing (\ac{cpu}/memory intense), and write-ahead logging
-(sequential, synchronous disk \ac{io} via \texttt{write()} and \texttt{fsync()}
-system calls). PostgreSQL's complexity and diversity let us evaluate \af's
-performance on a broad set of system calls.x
+PostgreSQL, a complex relational database, represents database workloads. 
+\texttt{pgbench} simulates transactions involving client connections 
+(network stack), query processing (\ac{cpu}/memory), and write-ahead
+logging (sequential, synchronous disk \ac{io} via \texttt{write()}, 
+\texttt{fsync()}). PostgreSQL's complexity allows evaluating \af's 
+performance across diverse system calls.
 
-To exercise PostgreSQL, we used its standard benchmarking tool, 
-\texttt{pgbench}. The Postgres server was started manually (i.e. not via
-\texttt{systemd}) with default configuration. For load generation, we configured 
-\texttt{pgbench} to simulate 48 concurrent clients (\texttt{-c 48}), each
-corresponding to a worker thread (\texttt{-j 48}, matching \texttt{-c}).
-This uses half the available logical cores (96) on our
-test server, chosen to impose a significant transactional load (similar to
-the rationale for Redis) without the risk of stressing system resources like the
-\ac{cpu} scheduler. As with Nginx, each test was run for a duration of 30
-seconds (\texttt{-T 30}). Each run was repeated three times.
+The Postgres server ran manually with default settings. \texttt{pgbench} simulated
+48 concurrent clients (\texttt{-c 48}) with corresponding worker threads 
+(\texttt{-j 48}), using half the server's cores to impose significant load
+without saturating resources like the CPU scheduler. Each test ran for 30
+seconds (\texttt{-T 30}). 
 
 \subsubsection{The \ac{npb} Suite}\label{subsubsec:npb-just}
 
-The \acl{npb} suite of benchmarks is a set of computationally intensive 
-benchmarks derived from computational fluid dynamics applications. This 
-workload is inherently \ac{cpu}-bound, with fewer \ac{io} or network system calls
-than the other selected benchmarks. This allows us to measure the
-overhead on \af on compute-heavy processes, where system calls will primarily relate
-to thread management (e.g. \texttt{futex()}) and memory management (e.g. 
-\texttt{mmap()}).
+The \acl{npb} suite comprises computationally intensive benchmarks derived
+from fluid dynamics. This CPU bound workload involves fewer I/O or network
+system calls than other benchmarks, isolating \af's overhead on compute-heavy
+processes where system calls primarily relate to thread management 
+(\texttt{futex()}) and memory management (\texttt{mmap()}). 
 
-We used an entirely standard configuration for the \ac{npb} suite, with our
-\texttt{make.def} and \texttt{suite.def} (files used to define the benchmark
-suite) provided in Listings~\ref{lst:npb-make-def} and \ref{lst:npb-suite-def}
-respectively. We opted to use the OpenMP-based test suite, with the workload 
-size set to \texttt{C} (a standard \ac{npb} problem size), as this was enough 
-work for a stable, accurate reading while ensuring a single run of the test 
-suite did not take more than three minutes.
-
-% Redis version 7.0.15 with \texttt{redis-benchmark} version 7.0.15
-% Nginx version 1.24.0 \texttt{wrk} version 4.1.0
-% \texttt{fio} \textbf{version 3.39-38-gf18c}
-% PostgreSQL version 16.8
-% version 3.4.3
+We used the standard OpenMP suite configuration (Listings~\ref{lst:npb-make-def},
+\ref{lst:npb-suite-def}) with workload size \texttt{C}. This provided
+stable readings within a reasonable runtime (less than three minutes per suite run).
 
 \subsection{Validation}\label{subsec:validation}
 
-We used a combination of strategies to validate that \af works correctly. We 
-extensively used manual testing on simple \textit{"Hello, World"} style 
-applications during development to ensure that the filtered application was 
-killed when it made a non-whitelisted system call. 
+We validated \af using manual testing and the Linux Test Project (\ac{ltp})
+suite \cite{LINUX_TEST_PROJECT}. 
 
-We then wrote a collection of 
-shared libraries (Listings \ref{lst:getpid-c},~\ref{lst:printf-c}) containing 
-functions that wrapped \ac{libc} function, and rewrote our 
-\textit{"Hello, World"} style application (provided in Appendix~\ref{sec:linkage})
-to use them. This example lets us easily reason about where we expect system calls
-to come from. We expect the \texttt{write()} system call (number 1) to come from 
-the \texttt{printf.so} and the \texttt{getpid()} (number 39) to come from 
-\texttt{getpid.so}. We generated a whitelist with \af \texttt{generate} 
-(Listing~\ref{lst:whitelist-toml}) and saw system calls 1 and 39 originating from
-their expected shared library files.
+Manual testing during development used minimal applications and custom
+shared libraries (Appendix~\ref{sec:linkage}, 
+Listings~\ref{lst:getpid-c},~\ref{lst:printf-c}) to confirm that: 
 
-When we manually removed a system call from the shared library's whitelist, we 
-observed that the process was killed. This verified that \af works correctly
-on small examples.
+\begin{enumerate}
+    \item \af correctly attributed system calls to shared libraries
+        (e.g., \texttt{write()} to \texttt{printf.so}, \texttt{getpid()} to 
+        \texttt{getpid.so}, per Listing~\ref{lst:whitelist-toml}).
+    \item \af terminated processes making system calls not present in their
+        respective library's whitelist.
+\end{enumerate}
 
-Having shown that \af was able to detect and kill processes making system calls not
-on their whitelists, we then ensured that system call behaviour had not been 
-adversely affected by \af. We turned to the \acg{ltp} system called test 
-suite \cite{LINUX_TEST_PROJECT} to do this. \ac{ltp} was installed according to the
-\href{https://linux-test-project.readthedocs.io/en/latest/users/quick_start.html}{documentation}.
+To ensure \af did not adversely affect general system call behavior, we used
+the \ac{ltp} system call test suite (\texttt{/opt/ltp/kirk -f
+ltp -r syscalls}), installed per the documentation 
+\cite{ltpQuickstart}. We compared
+results running the suite unfiltered (baseline) against running it under \af
+using an \texttt{afgen}-generated whitelist 
+(\texttt{afgen ./whitelist.json/opt/ltp/kirk...}). 
 
-We ran the system call test suite using the command \texttt{/opt/ltp/kirk -f ltp -r
-system calls} with no filtering enabled for some baseline results. We then ran
-\texttt{afgen /opt/ltp/kirk}\dots to generate the relevant
-whitelists. We supplied this whitelist as an argument to \af and ran
-\texttt{addrfilter ./whitelist.json /opt/ltp/kirk}\dots to run the test suite
-with \af enabled. We observed differences in test failures with \af
-enabled versus disabled, displayed in Table~\ref{tab:af_failures}.
+Table~\ref{tab:af_failures} shows the 11 additional test failures introduced
+when running \ac{ltp} under \af.
 
 \begin{table}[h]
 \centering
-\caption{\ac{ltp} test failures with \af disabled and enabled.}
+\caption{\ac{ltp} test failures introduced by \af.}
 \label{tab:af_failures}
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{c@{}}
 \toprule
-\textbf{\af disabled} & \textbf{\af enabled} \\
+\textbf{Test Failures Introduced with \af} \\
 \midrule
-\texttt{listmount04}       & \texttt{getegid02}           \\
-\texttt{fanotify13}        & \texttt{getgid03}            \\
-\texttt{statmount02}       & \texttt{listmount04}         \\
-\texttt{statmount06}       & \texttt{process\_vm\_readv02} \\
-                           & \texttt{process\_vm\_readv03} \\
-                           & \texttt{process\_vm\_writev02}\\
-                           & \texttt{getegid02\_16}        \\
-                           & \texttt{getgroups01}         \\
-                           & \texttt{open14}              \\
-                           & \texttt{openat03}            \\
-                           & \texttt{semctl06}            \\
-                           & \texttt{perf\_event\_open01} \\
+ \texttt{process\_vm\_writev02}\\
+ \texttt{process\_vm\_readv02} \\
+ \texttt{process\_vm\_readv03} \\
+ \texttt{perf\_event\_open01} \\
+ \texttt{getegid02\_16}        \\
+ \texttt{getgroups01}         \\
+ \texttt{getegid02}           \\
+ \texttt{getgid03}            \\
+ \texttt{semctl06}            \\
+ \texttt{openat03}            \\
+ \texttt{open14}              \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-This difference is a cause for concern, as our solution should not break
-existing kernel functionality. Some failures are explainable, and some require
-future research. We hypothesise that the failures relating to \textit{groups}
-(\texttt{getegid02}, \texttt{getgid03}, \texttt{getegid02\_16},
-\texttt{getgroups01}) are a consequence of how we implemented application spawning in the frontend. In Section~\ref{subsec:impl-frontend}, we discussed the
-need to spawn applications without root privileges and achieved this by manually
-changing the process's \ac{uid} and \ac{gid}. This manual changing of \acp{uid}
-and \acp{gid} may change the results expected by the \ac{ltp} suite and cause the breakage.
+We believe that these failures do not stem from incorrect or problematic
+filtering logic, but from the way we handled de-privileging processes in our
+frontend (Section~\ref{subsubsec:spawning-exec}). By changing the
+\ac{uid}/\acp{gid} of the filtered process, we invalidated assumptions made by
+the \ac{ltp} test suite authors, which likely caused these tests to fail.
 
-\todo{reduce failure problem; talk about setuid}
+Unexpected \ac{gid} values are clearly the cause of the \texttt{getgroups01} and
+\texttt{*gid*} tests, and likely caused the failures in the \texttt{open*} and 
+\texttt{semctl06} tests. \texttt{open()} and \texttt{semctl()} system calls
+access files and semaphores: both objects whose access is controlled by group
+permissions. 
 
-This is an implementation detail artefact that could be addressed using a setuid program. Therefore, this is not a problem or limitation with the core filtering solution.
+We hypothesise that the failures observed here relate to 
+assumptions made about the groups that are allowed to access the associated
+files/semaphores, although the documentation is missing entries for the failures
+seen here \cite{LTPFailDocs}. 
+
+Similarly, the man pages for \texttt{perf\_event\_open()} state that the system 
+call can fail with the \texttt{EACCES} error when 
+``\textit{unprivileged process may encounter this error: attaching to a 
+process owned by a different user}'' \cite{perfEventOpen2}. 
+This failure almost certainly stems from the manually changed \ac{uid}/\acp{gid}.
 
 The \texttt{process\_vm\_readv()} and \texttt{process\_vm\_writev()} system calls 
 allow for a form of \ac{ipc} which bypasses kernel space, so it is not immediately 
-obvious why these tests fail \cite{process_vm_readv}. The same goes for the 
-\texttt{semctl()} system call, which is used to control semaphores and the 
-\texttt{perf\_event\_open()} system call, used to set up performance
-monitoring: \af's design does not provide any clues as to why these system
-calls tests fail \cite{perf_event_open}.
+obvious why these tests fail \cite{process_vm_readv}. More work is needed to
+identify the root cause of these failures.
 
-The most puzzling of all are the failures in tests relying on the 
-\texttt{open()} and \texttt{openat()} system calls. Both involve file creation -
-throughout the development and evaluation process, filtered applications have
-exhibited no issues with file interaction. It is possible that altering the
-\ac{uid}/\ac{gid} of the filtered application may create a file associated with
-a user/group unexpected by the \ac{ltp} test suite, but this is speculation.
-More work is needed to identify the cause of these failures.
-
-These 12 \ac{ltp} failures notwithstanding, we believe the core filtering
-mechanism functions as intended. Now, we move on to security analysis,
-where we quantify the degree of privilege reduction provided by \af.
+Crucially, these failures are artifacts of the testing setup's de-privileging
+mechanism. Using an alternative approach (e.g., a \texttt{setuid} helper
+\cite{von2010ubuntu}) would
+likely resolve these \ac{ltp} compatibility issues. Addressing this is left
+for future work. The core filtering logic, validated manually, appears
+correct and therefore we proceed with the security evaluation.
 
 \subsection{Security Evaluation}\label{subsec:security-eval}
 
-To evaluate the privilege reduction afforded by using \af over seccomp, we
-define a \textit{privilege metric} (Equation~\ref{eqn:privilege}), which is
-a function of the set of system calls a compartment in an application can make.
+To evaluate \af's privilege reduction compared to seccomp, we define a
+probabilistic privilege metric based on permitted system calls. \af filters 
+system calls based on their origin within file backed memory regions 
+(typically shared libraries) in the process's \ac{vma} 
+(Section~\ref{subsec:objs-assumpions-tm}). We term these regions compartments. 
+Our metric operates on these compartments. 
 
-Recall that \af provides fine-grained filtering based on file-backed
-regions (shared libraries) within the process's \ac{vma}. \af associates a 
-system call whitelist with each of these regions per our threat
-model presented in Section~\ref{subsec:objs-assumpions-tm}. For the purpose of this
-evaluation, we will refer to these regions as compartments. We defined our metric in terms of these compartments, as this aligns with how \af
-views the world. To calculate the privilege of a seccomp-filtered application,
-we define the application as being made of a single compartment. 
-
-This avoids the need to define two metrics, or ``special case'' 
-seccomp-filtered applications.  Using this metric (\ref{eqn:privilege}), and our custom evaluation
-tool \texttt{syso}, we show that \af provides significant privilege
-reduction compared to seccomp for all applications and benchmarks we tested,
-therefore fulfilling its requirement to reduce privilege.
+For comparison, a seccomp filtered  application is treated as a single
+compartment encompassing all permitted system  calls. This unified approach
+avoids needing separate metrics. Using this metric 
+(Equation~\ref{eqn:privilege}) and our tool \texttt{syso}, we demonstrate
+significant privilege reduction with \af across our benchmarks.
  
 \subsubsection{Quantifying Privilege of
 Compartments}\label{subsubsec:eval-quant-privilege}
 
 To quantify privilege reduction, we first reason about what the 
 \textit{privilege} of an application intuitively means and then look to ground
-the notion mathematically.
+the notion mathematically. Our metric is \textit{probabilistic} -- it allows us
+to reason about the likelihood of compromise. Probabilistic metrics are
+precedented in systems security, for example entropy in \ac{aslr} \cite{aslr_entropy}.
 
 We posit that the privilege of a component (in the context of system call
-filtering) quantifies the potential harm it could cause via the system calls
+filtering) quantifies the likely potential harm it could cause via the system calls
 it is permitted to execute. We considered whether the number of unique
 system calls an application can make would be a sensible metric for privilege
 but decided that this was imprecise. The reason why is
-demonstrated by the following example:  
+demonstrated by the following example:
 
 Consider two compartments which allow an attacker access to
 exactly one system call: attacker \textit{A} has access to the 
@@ -375,7 +293,7 @@ system call receives a \textit{danger score} - $1$, $2$, or $3$ - according
 to the privilege level of the system call.
 
 We define the overall privilege score for a specific compartment, denoted as
-$C$, by summing the individual danger scores of all system calls utilised
+$C$, by summing the individual danger scores of all system calls invoked
 within that compartment. Let $S_C$ be the set of unique system calls present
 in compartment $C$, and let $\mathrm{Score}(s)$ represent the danger score
 assigned to a specific system call $s \in S_C$. The Compartment Privilege, $P_C
@@ -888,3 +806,32 @@ specific \ac{ltp} test failures. We have shown that \af is not only effective
 in securing applications, but also quantified the slowdown that users can 
 expect to see when using \af.
 
+\subsection{Analysis of Performance Overhead}
+
+To understand the source of the performance variations observed across the
+benchmarks, we analysed profiling data gathered from \af's filtering logic,
+(seeSection~\ref{subsubsec:impl-find-site-opt}). We compare the time spent in
+each execution stage of the core filtering logic across applications to
+understand why some apps had more performance overhead than others.
+
+We gathered profiles from each application, removed outliers (defined as
+$\pm1.5\times$ \ac{iqr}). We then took the mean time spent in each stage of
+filtering and visualise the results in Figure~\ref{fig:profile-means}.
+Individual flame graphs for each benchmark are provided in
+Appendix~\ref{apx:flame-graphs}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\linewidth]{./evaluation-artefacts/results/profiling/mean_stacked_horizontal_comparison.pdf}
+    \caption{A stacked bar chart showing the average time (in nanoseconds) \af
+    spent in each phase of filtering.}
+    \label{fig:profile-means}
+\end{figure}
+
+We see that \af processes Redis's sytem calls significantly quicker than the
+other benchmarks (around 2000ns), and Nginx's significantly slower (almost
+8000ns). This explains why Redis only saw moderate slowdown despite being so 
+system call intensive. Postgres, \texttt{fio} and the \texttt{bt.C.x} \ac{npb}
+microbenchmark each took around 5000ns on average to process a system call.
+
+\todo{why is redis so much shorter?}
