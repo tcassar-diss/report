@@ -6,20 +6,19 @@ such as process stacks and address spaces, system calls, \ac{bpf}, and software
 compartmentalisation. 
 
 This chapter aims to give the reader the minimum background knowledge needed
-to understand the motivation, design, and implementation of \af. We argue that
-\af is novel and discuss how it  fits into the current research landscape in
-Section~\ref{sec:related-works}.
+to understand the motivation, design, and implementation of \af.
+Section~\ref{sec:related-works} describes how \af fits into the wider landscape
+of system call research.
 
 \subsection{Linux Processes}
 
-Processes are a key concept in the Linux kernel and system call
-filtering. A process is effectively an application (or part of one) - more 
-concretely, it is an \textit{instance of an executing program} 
+Processes are a key concept in the Linux kernel and in system call
+filtering -- a process is an \textit{instance of an executing program} 
 \cite{LINUX_PROGRAMMING_INTERFACE}. \af is applied to a process and requires 
 access to the process's \ac{vma}, stack, and metadata (e.g. \ac{pid}) to 
 function.
 
-\subsubsection{Virtual Memory}
+\subsubsection{Virtual Memory}\label{subsec:bgd-vmem}
 
 Each process accesses memory through the \textit{virtual memory} abstraction.
 In the kernel, each process has an \texttt{mm\_struct} which contains a
@@ -48,9 +47,9 @@ into a processes address space by the linker at runtime, with the
 in memory \cite{DYNAMIC_LINKERS_OS}. One can inspect a process's \ac{vma} from
 userspace either through the \texttt{pmap} command line tool or by reading
 the contents of the \texttt{/proc/pid/maps} file (where \texttt{pid} is
-replaced by the relevant process's \ac{pid}. 
+replaced by the relevant process's \ac{pid}). 
 
-\af splits up applications for system call filtering using these \ac{vma} regions: a system calls
+\af splits up applications for system call filtering using these \ac{vma} regions: a system call
 whitelist per file-backed memory region.
 
 \subsubsection{Stack Unwinding}
@@ -64,9 +63,9 @@ said stack frame.
 Debugging, observability, and security tools often inspect the process stack
 while the program runs through a mechanism called \textit{stack
 unwinding} \cite{gregg2014linux, kilroy2022linker}. Stack unwinding involves looking at 
-each frame in the userspace stack without popping any frames. We
+each frame in the user space stack while the process is executing. We
 introduce stack unwinding here as \af relies on stack unwinding for part of
-its design: see Section~\ref{subsubsec:find_syscall}.
+its design (Section~\ref{subsubsec:find_syscall}).
 
 \subsection{Linux Security Mechanisms}
 
@@ -92,18 +91,19 @@ enabled, the linker will change the addresses of the stack, heap, and file-backe
 doesn't affect the address space of forks (as the linker is not involved in
 a \texttt{fork()} system call). This allows us to run \af with full \ac{aslr}
 enabled for our suite of benchmarks (see 
-Section~\ref{subsec:benchmark-selection}), but it is worth considering.  
+Section~\ref{subsec:benchmark-selection}), but this may vary by workload.  
 
-The final built-in security feature worth mentioning here is the separation of user
-space/kernel space. Untrusted applications run in userspace, where there is no direct access to hardware, I/O devices, or the 
-network from userspace. On the other hand, kernel space is a more privileged 
-environment than userspace. The kernel has direct access to hardware, memory, and the
+The final security feature worth mentioning is the separation of user
+space/kernel space. Untrusted applications run in user space, where there is no
+direct access to hardware, \ac{io} devices, or the 
+network, from user space. On the other hand, kernel space is a more privileged 
+environment than user space. The kernel has direct access to hardware, memory, and the
 network. As such, one can do a lot of damage from kernel space, including causing
 the kernel to crash.
 
 When an application needs to perform a privileged action, such as creating a
 file, it must ask the kernel to do the action on the application's behalf. The
-application does this by issuing a system call, visualised in
+application does this by issuing a \textbf{system call}, visualised in
 Figure~\ref{fig:syscall-flow}.
 
 \begin{figure}[h]
@@ -117,8 +117,9 @@ flow}\label{fig:syscall-flow}
 
 Since a system call is a request for a privileged action, analysing system calls
 is a well-established idea in systems security. Host-based intrusion detection
-systems such as \cite{10.1145/3214304} use system call invocation patterns to look for
-signs of compromise.
+systems use system call invocation patterns to look for signs of compromise 
+\cite{10.1145/3214304}. System call \textit{filtering} is an established, 
+widespread security technique which provides the foundation for \af.
 
 \subsection{System Calls in Existing Security Mechanisms}
 
@@ -143,17 +144,17 @@ In filter mode, a \ac{bpf} program (plus some metadata) is supplied in the argum
 \texttt{prctl}. This program is run when a system call occurs, and its logic
 determines how to handle the system call. 
 
-Seccomp's man pages entry suggests that it may be able to provide fine-grained
+Seccomp's man pages entry suggests that seccompBPF may be able to provide fine-grained
 system call filtering based on the process's address space, which is what we
 are proposing for this project. It's entry states that seccompBPF programs have
 access to the ``\texttt{instruction\_pointer} \textit{field}'', which
 ``\textit{might be useful in conjunction with the use of /proc/pid/maps to
-perform checks on which region\dots made the system call}''. As noted in
+perform checks on which region\dots made the system call}''. 
+
+As noted in
 \textcite{yang2024makingsyscallprivilegeright}, seccompBPF does not provide
 access to anything other than ptrace registers, which makes it too restrictive
-for \af.
-
-As we argue in Section~\ref{subsubsec:find_syscall}, the instruction pointer
+for \af. As we argue in Section~\ref{subsubsec:find_syscall}, the instruction pointer
 address alone is insufficient for the fine-grained filtering mechanism we
 propose here. Thus, a novel approach built on a different technology is needed
 to implement \af. 
@@ -165,7 +166,10 @@ that allows developers to write custom programs which can be \textit{dynamically
 loaded} into the kernel to alter the kernel's behaviour \cite{LEARNING_EBPF}.
 
 Writing kernel code without \ac{bpf} is error-prone and typically
-requires linking to the kernel \cite{UNDERSTANDING_LINUX_KERNEL}. In contrast,
+requires complex build procedures \cite{UNDERSTANDING_LINUX_KERNEL}. In contrast,
+\ac{bpf} programs are easily compiled and loaded into the kernel with the
+\texttt{bpf()} system call without any restarts \cite{bpf-man-pages}.
+
 \ac{bpf} programs can be configured to run on many instrumentation points, such
 as a system call being triggered. \ac{bpf} also provides a \textit{verifier} which
 ensures the  loaded program is safe \cite{LEARNING_EBPF}. This makes it
@@ -173,24 +177,31 @@ impossible to cause a kernel panic (or any similarly catastrophic event) when
 writing \ac{bpf}, although real-world exploits targeting the verifier have
 been seen \cite{BPF_VERIFIER_EXPLOIT}.  
 
+\ac{bpf} achieves this guaranteed safety through the \textit{verifier}. Each
+\ac{bpf} program is formally verified to ensure that all loops terminate, no
+null dereferences are possible, and that no undefined behaviour can occur in
+\iac{bpf} program. 
+
+The verifier makes \ac{bpf} a \textbf{highly restrictive programming language}
+and therefore is extremely difficult to write. The language forces the
+developer to think about programming differently. Traditional function calls
+are impossible -- \ac{bpf} developers use \textit{tail calls} instead. Indefinite
+loops are not allowed; the verifier must be able to \textit{prove} that a loop
+will terminate. Accessing data structures from kernel or user space must be
+done through helper functions, which are convenient but do not always exist. \ac{bpf}
+is a rapidly developing, poorly documented language which only adds to its 
+difficultly.
+
 \subsubsection{Context and Use Cases}
 
-As such, \ac{bpf} is used a lot in industry for observability tooling: being able to
+Despite the development challenges, \ac{bpf} is widely used in industry. Being able to
 dynamically load \ac{bpf} programs allows developers to instrument running processes
-without changing configuration files or using sidecar containers \cite{SIDECAR}.
+without changing configuration files or using sidecar containers \cite{SIDECAR}
+makes it good for implementing observability tooling.
 \ac{bpf} is also often used in networking and firewalls 
 \cite{LINUX_NETWORKING_OBSERVABILITY} - a \ac{bpf} program can be loaded 
 onto the \ac{xdp} to inspect packets at the 
 ``\textit{earliest possible point in the network driver}'' 
-\cite{CILIUM_BPF_XDP_INTRO}. 
-
-The trade-off here is that \ac{bpf} is extremely limited in expressivity:
-something as mundane as reading every element of an array can be impossible due
-to the verifier needing to ensure that every memory access will not result in 
-a null dereference (even though a loop helper now exists 
-\cite{BPF_LOOP_COMMIT}). Lots of accesses to structs must be done through 
-\textit{helper functions} - convenient when they exist, but sometimes mean a trivial
-task is impossible (without writing custom kernel code) \cite{bpf_kfuncs_docs}. 
 
 As discussed in Section~\ref{subsec:bpf-in-security}, \ac{bpf} has been
 extensively used for in-kernel security solutions. This is important as it shows
@@ -201,29 +212,26 @@ precedent for using \ac{bpf} for systems security applications.
 \Iac{bpf} program operates by attaching to specific kernel instrumentation
 points (like tracepoints or function entries); it runs automatically
 whenever kernel execution hits that point. \ac{bpf} maps --versatile key-value stores often accessible from both
-the kernel program and user space applications -- store persistent state or configuration. Mechanisms like ringbuffers or perf buffers efficiently send
+the kernel program and user space applications -- store persistent state and configuration. Mechanisms like ringbuffers or perf buffers efficiently send
 event data from the kernel to user space, allowing near real-time communication.
 
 \af uses all of these \ac{bpf} concepts except perf buffers.
 Section~\ref{sec:implementation} details specifics,
 discussing which instrumentation point we attached our program to and why. We
-also discuss which maps and ringbuffers we use and why.
+also discuss which maps/ringbuffers we use and the helper functions needed for
+our filtering logic.
 
 \subsection{Software Compartmentalisation}
 
-The core idea of \af{}- decomposing the process address space to apply 
-fine-grained system call restrictions - is an application of \textit{software
+The core idea of \af -- decomposing the process address space to apply 
+fine-grained system call restrictions -- is an application of \textit{software
 compartmentalisation}.
 
 Software compartmentalisation is a form of defensive programming where an application
-is broken down into multiple isolated compartments \cite{SOK}. Compartments
+is broken down into multiple isolated compartments. Compartments
 communicate only over secure interfaces and do not trust each other. An
 attacker who manages to compromise one compartment will not be able to gain
-access to data or resources assigned to another compartment.  
-
-Implementing this form of compartmentalisation requires deep kernel
-integration, making \ac{bpf}, with the capabilities discussed previously, a 
-suitable tool for the task.  
+access to data or resources assigned to another compartment \cite{SOK}.
 
 Compartmentalisation has proven helpful in containing memory safety issues
 \cite{CONFFUZZ}, sandboxing untrusted third parties \cite{ANDROID_SOK} or
@@ -233,3 +241,6 @@ principle of least privilege to software \cite{PRIVMAN}. As discussed in
 Section~\ref{subsec:objs-assumpions-tm}, we also assume a compartmentalisation
 mechanism exists on our host system.
 
+Implementing this form of compartmentalisation requires deep kernel
+integration, making \ac{bpf}, with the capabilities discussed previously, a 
+suitable tool for the task.  

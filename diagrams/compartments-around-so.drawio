@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
   <diagram name="Page-1" id="o56g5Fyr8evUAqT_ZzkA">
-    <mxGraphModel dx="1234" dy="898" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1234" dy="917" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -276,8 +276,8 @@
         <mxCell id="plOoAYpIa059WLNFDd3Z-104" value="File the loader maps into&lt;div&gt;file backed region&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
           <mxGeometry x="500" y="370" width="150" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="vEgRC3SEYZ5xtnId_4TJ-4" value="Compartment" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=17;fontColor=light-dark(#6f0000, #ededed);" vertex="1" parent="1">
-          <mxGeometry x="307" y="189" width="60" height="30" as="geometry" />
+        <mxCell id="vEgRC3SEYZ5xtnId_4TJ-4" value="Compartment Boundaries" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=17;fontColor=light-dark(#6f0000, #ededed);" parent="1" vertex="1">
+          <mxGeometry x="250" y="189" width="210" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

@@ -16,10 +16,8 @@ optimisations built into \af.
 
 We decided to use \ac{bpf} in the backend, Go for the frontend, and the
 \texttt{ebpf-go} library from the Cilium project to interoperate between Go and
-\ac{bpf}. We wrote \af in 3,400 \ac{loc}, 67\% of which was Go, and 33\% was 
-\ac{bpf}. We developed around another 1,500\ac{loc} for additional tooling and
-almost 3,000 \ac{loc} of Python to analyse benchmark results (as outlined in
-Section~\ref{subsec:perf-eval}). Table~\ref{tab:loc_breakdown} summarises these figures.
+\ac{bpf}. Table~\ref{tab:loc_breakdown} details how many \ac{loc} were written
+in each language.
 
 \begin{table}[htbp] % Placement options: here, top, bottom, page
     \centering % Center the table
@@ -42,20 +40,12 @@ Section~\ref{subsec:perf-eval}). Table~\ref{tab:loc_breakdown} summarises these 
     \end{tabular}
 \end{table}
 
-\ac{bpf} was chosen as it is lightweight, secure, and does not require 
-patching the kernel. It is expressive enough to be able to achieve 
-all of the design requirements listed in Section \ref{subsec:objs-assumpions-tm} 
-but also formally verified so that causing the kernel to crash becomes
-impossible.\footnote{Exploits and bugs mean that this is not impossible, but in
-practice, it is extremely hard to do.} \ac{bpf} programs can also be adopted and
-applied to programs entirely transparently: no configuration files need changing
-and no business logic needs changing \cite{halinen-security-risks-sidecar-containers-2024}. \ac{bpf} is extremely restrictive, but
-this is the cost of not having to patch the kernel/using kernel modules, which, in
-the worst case may require recompiling the kernel
-\cite{kbuild-modules-linux-kernel-docs-2025}, 
-and would make it harder for developers to use \af.
+We chose to write our kernel code in \ac{bpf} because it allows for dynamic,
+lightweight, and secure kernel instrumentation without requiring kernel patches
+or modules, as discussed in Section~\ref{subsec:bgd-bpf}. This ensures \af can
+be applied transparently \cite{halinen-security-risks-sidecar-containers-2024}.
 
-\ac{bpf} programs are commonly written in C and compiled to \ac{bpf} bytecode.
+\ac{bpf} programs are often written in C and compiled to \ac{bpf} bytecode.
 Developers commonly write their program's non-\ac{bpf} components 
 in C as structs can be shared between \ac{bpf} and the rest of the code.
 This choice of Go may seem slightly unorthodox. We believe that Go's
@@ -72,7 +62,7 @@ and therefore is not affected by Go's runtime.
 \texttt{ebpf-go} handles autogeneration of idiomatic Go code from the C/\ac{bpf}
 source (with the \texttt{go2bpf} tool),
 compilation of the \ac{bpf} bytecode, and provides mechanisms to attach programs
-to tracepoints all from a Go API. The tradeoff with using
+to tracepoints all from a Go \texttt{prctl()} wrapper. The tradeoff with using
 \texttt{ebpf-go}/Go instead of C is that we can develop the frontend in an
 easier language to work with at the cost of having access to a smaller, less
 mature ecosystem and toolchain. However, this is not a problem for \afss: the
@@ -107,18 +97,6 @@ eBPF Code Generator   & go2bpf (part of ebpf-go) \\
 \end{tabular}
 \end{table}
 
-\subsection{eBPF Helper Functions}
-
-Including the \texttt{bpf/bpf\_helpers} header file gives you access to a wide
-variety of \ac{bpf} \textit{helper functions}: functions which are written in
-the kernel instead of \ac{bpf} and provide common functionality such as reading
-data from structs \cite{ebpf-helper-functions-2025, ebpf-bpf-probe-read-user-2024}. 
-These are needed as lots of functions are unrepresentable in 
-\ac{bpf} due to the verifier's strictness - in fact, \ac{bpf} is not Turing
-complete \cite{gregg-bpf-performance-tools-2019}. Kernel functions often have
-corresponding \ac{bpf} helpers, which we make use of in Sections
-\ref{subsec:impl-syscall-site} and \ref{subsec:impl-find-vma}.
-
 \subsection{Core Filtering Logic}
 
 \afg core filtering logic is the novel part of the implementation, and so is
@@ -147,7 +125,7 @@ are run when some code path passes the tracepoint. Linux machines have many
 different tracepoints for different events, including one for each different type of 
 system call. 
 
-\begin{figure}[h!]
+\begin{figure}[h]
     \centering
     \begin{tikzpicture}[
         % Node styles
@@ -183,8 +161,8 @@ as they will not execute for every system call. Therefore, we elected to use a
 raw tracepoint.
 
 The \texttt{sys\_enter} raw tracepoint is executed on every system call before the
-kernel starts to process the system call. This is helpful, as it allows us to block
-a system call (if need be) before the kernel begins to execute it. We also need
+kernel starts to process the system call. This allows us to block
+a system call before the kernel begins to execute it. We also need
 access to the system call number, a syscall argument on Linux/x86. Unhelpfully, 
 raw tracepoints do not make the system call arguments readily available to the attached 
 \ac{bpf} program. Instead, the attached program receives a pointer to an array of 
@@ -192,9 +170,10 @@ zero length (a C pattern for defining a ``variable length'' array) with argument
 differing per-system call. One commonality between every syscall is that the syscall 
 number is available as the second argument in the array. 
 
-\begin{table}[h!]
+\begin{table}[h]
 \centering
-\caption{Comparison of \texttt{raw\_tp/sys\_enter} and system call-Specific Tracepoints for Filtering Every Syscall}
+\caption{Comparison of \texttt{raw\_tp/sys\_enter} and System Call-Specific
+Tracepoints for Filtering Every System Call}
 \begin{tabular}{|p{6cm}|p{6cm}|}
 \hline
 \texttt{raw\_tp/sys\_enter} & \textbf{system call-Specific} \\
@@ -229,14 +208,8 @@ turn our attention to the business logic.
 \subsubsection{Fork Following}
 
 The filtering logic must first decide whether we
-need to apply our filter to the current system call. It must also implement fork following. 
-
-Fork following is the idea that we should apply our filter to any children of a
-filtered process. If we apply a filter to an app and it forks/execs,
-the child process should inherit the same filter. This idea was
-presented in Section \ref{subsec:design-fork-following} and relies
-on a ``follow'' map and the \ac{pid}/parent \ac{pid} of the calling
-process.
+need to apply our filter to the current system call. It must also implement fork
+following as discussed in Section~\ref{subsec:design-fork-following}. 
 
 We created a ``follow'' map using a \texttt{BPF\_MAP\_TYPE\_HASH} which mapped
 \ac{pid}s to booleans, effectively implementing a set data type. (P)\acp{pid}
@@ -252,27 +225,36 @@ we return from the program with an error code of 0. Otherwise, we
 use \texttt{bpf\_map\_insert\_elem()} to add the calling \ac{pid} to
 the  ``follow'' map.
 
-\subsubsection{Finding the system call Site}\label{subsec:impl-syscall-site}
+\subsubsection{Finding the System Call Site}\label{subsec:impl-syscall-site}
 
-Next, \af needs to find the system call site - the \textbf{first non-\ac{libc} return pointer} in the userspace stack when the syscall was made.
+Next, \af needs to find the system call site - the \textbf{first non-\ac{libc} return pointer} in the user space stack when the syscall was made.
 
 To do this, we pulled the first 16 stack frames from the user stack with the 
 \texttt{bpf\_get\_stack()} helper function and the \texttt{BPF\_F\_USER\_STACK}
 flag. \texttt{bpf\_get\_stack()} returns an array of return pointers, with the
-topmost stack frame at index 0. 
-
-To identify the first non-\ac{libc} return pointer, we started iterating over
+topmost stack frame at index 0. To identify the first non-\ac{libc} return pointer, we started iterating over
 the list of return pointers and finding which library each belonged to.
-By using the \texttt{bpf\_find\_vma()} helper to map each return pointer to its
-corresponding shared library, we were able to find the addresses which belonged
+
+Our initial implementation, visualised in Figure~\ref{fig:find-syscall-site-impl}
+used \texttt{bpf\_find\_vma()} helper to map each return
+pointer to its corresponding shared library, we were able to find the addresses which belonged
 to \ac{libc} and skip over them. Then, we broke out of the loop when we found a
 filename with \texttt{bpf\_find\_vma()} that was not \ac{libc}, therefore
 identifying the first non-\ac{libc} return pointer.
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\linewidth]{./diagrams/find-syscall-site-impl.drawio.pdf}
+    \caption{A diagram visualising the process of finding the system call site
+    in the array of return pointers given by \texttt{bpf\_get\_stack()}.}
+    \label{fig:find-syscall-site-impl}
+\end{figure}
+
 This approach was accurate but too slow to be performant. Calling \texttt{bpf\_find\_vma()} is
 slow, as it walks the in-kernel \ac{vma} red-black tree. Red-black trees scale
 well but are slow to use as they are a pointer-based data structure \cite{pointer-based-ds-slow}. Moving to
-a child node involved loading memory that is likely not already in the cache.
+a child node involved loading memory that is likely not already in \ac{cpu} cache.
+
 Finding one system call site often involves walking through multiple \ac{libc}
 addresses before finding the first non-\ac{libc} return pointer. When run in
 verbose mode, \af collects runtime statistics
@@ -281,31 +263,32 @@ applications like Redis have anywhere from 3-7 stack frames with return pointers
 within \ac{libc}. This will result in 4-8 lookups per system call (including the
 first non-\ac{libc} return pointer), detrimentally affecting performance.
 
-\subsubsection{Optimising system call Site
+\subsubsection{Optimising System Call Site
 Finding}\label{subsubsec:impl-find-site-opt}
 
-We noted that many system call sites are frequently reused, and could
-therefore maintain a mapping from the return pointer to the relevant whitelist. However,
-this approach suffers from issues with cache coherency. While effective at
-reducing lookups, the cache would need to be flushed every time a system call which
-can change the \ac{vma} is made (e.g. \texttt{mmap}, \texttt{munmap},
-\texttt{brk}, etc\dots). 
+While reusing system call return pointers for whitelist lookups could reduce
+overheads, maintaining cache coherency presents significant problems when memory
+mappings change (e.g. on a \texttt{mmap()}, \texttt{munmap()}, or \texttt{brk()}
+system calls). Implementing the required cache management would involve
+considerable engineering effort separate from the main research, including
+developing and correctly ordering complex \ac{bpf} programs to monitor
+relevant system calls. 
 
-This would require writing another \ac{bpf} program to
-monitor these calls and invalidate stale address ranges. This would need significant
-engineering effort orthogonal to our research. We would also need to identify
-which tracepoint(s) (or instrumentation points) this program must be
-attached to. We would have to configure this program to run \textbf{before} the
-\af core program, which would be a challenge as the first instrumentation point
-in the system call path is the \texttt{sys\_enter} raw tracepoint.
+Instead, we decided on a simpler approach, visualised in
+Figure~\ref{fig:find-syscall-site-impl-opt}. We do not expect the
+\texttt{\_\_code\_\_} segment's address of \ac{libc} to change throughout
+execution (specified in Section~\ref{subsec:objs-assumpions-tm}). Therefore, 
+we cache \acg{libc} start and end addresses in a map we call the \texttt{libc\_ranges} map.
+Since the addresses will not change during execution, no cache invalidation
+logic is needed.
 
-Having considered these alternatives, we decided on a much simpler
-implementation. Our solution to speed up identifying whether return pointers
-belong to \ac{libc} is to cache \acg{libc} start and end pointers in \iac{bpf}
-map which we call the \texttt{libc\_ranges} map. In 
-Section~\ref{subsec:objs-assumpions-tm} we assume that the  \ac{libc} address space 
-will be contiguous and will not change during program execution. Therefore, we
-do not need to build logic for cache invalidation.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{./diagrams/find-syscall-impl-opt.drawio.pdf}
+    \caption{A diagram visualising the process of finding the system call site
+    in the array of return pointers given by \texttt{bpf\_get\_stack()}.}
+    \label{fig:find-syscall-site-impl-opt}
+\end{figure}
 
 The design section also required that we
 would not introduce a security risk if these assumptions were invalidated. Using a cached \texttt{libc\_ranges} map
@@ -357,17 +340,14 @@ the system call site, is done by traversing the \ac{vma} red-black tree in the
 kernel. This is done using the \texttt{bpf\_find\_vma()} helper, which was used
 in the unoptimised implementation of the system call site identification logic.
 
-\texttt{bpf\_find\_vma()} returns the \texttt{vm\_area\_struct} struct associated with the
-return pointer's address. The \texttt{vm\_area\_struct} struct is a kernel data structure
-which holds information about the process's \ac{vma}, including addresses,
-permissions, and the file which backs the memory. Here, we are interested in the
-file which backs the memory region. We read this by supplying a function
-to the \texttt{bpf\_find\_vma()} helper, which is called when the right
-\texttt{vm\_area\_struct} struct is found. Then, we use \texttt{bpf\_probe\_read()} to make
-the series of reads needed to find the filename.
+\texttt{bpf\_find\_vma()} returns the \texttt{vm\_area\_struct} struct
+(introduced in Section~\ref{subsec:bgd-vmem}) associated with the
+return pointer's address. We supply the helper function with a \textit{callback}
+function which reads the name (with \texttt{bpf\_probe\_read()}) of the file-backed memory region when the right
+\texttt{vm\_area\_struct} is found.
 
 We then use the filename as a key in another \ac{bpf} map - the ``whitelists''
-map. This is a \texttt{BPF\_MAP\_TYPE\_HASH} which associates strings (filenames
+map. The whitelists map is implemented as a \texttt{BPF\_MAP\_TYPE\_HASH} which associates strings (filenames
 of shared libraries) to whitelists. This map is populated by the Go frontend
 with pre-generated whitelists before the \ac{bpf} program is attached to the 
 \texttt{raw\_tp/sys\_enter} tracepoint and is discussed in 
@@ -375,10 +355,13 @@ Section~\ref{subsec:impl-frontend}.
 
 \subsubsection{Checking the Whitelist}
 
+We then check the current system call number against the relevant whitelist.
+
 Whitelists are implemented as a bit array, 56 bytes long. Bit position $i$ is
 set to $1$ if and only if system call number $i$ is allowed. We opted for a bit
 array as it is a compact, efficient data structure and can be queried easily.
 
+% TODO: Cut para if need words
 To check if a system call is allowed, we divide the syscall number by 8 to identify  
 which byte the relevant bit is in. We then take the system call number modulo 8 to
 identify which bit in the byte we must look at. If the value of the bit
@@ -404,17 +387,18 @@ using the \texttt{bpf\_send\_signal()} helper function.
 \texttt{bpf\_send\_signal()} can only be used to send signals to the calling
 process - by sending a \texttt{SIGKILL}, we kill the malicious process.
 
-If the user has configured warn mode or ``kill all'' mode, then userspace needs
+If the user has configured warn mode or ``kill all'' mode, then user space needs
 to be involved to some degree. To do this, we use \iac{bpf} ringbuffer to inform
-userspace when a system call has tripped the filter. The ringbuffer is a thread-safe
+user space when a system call has tripped the filter. 
+
+The ringbuffer is a thread-safe
 \ac{bpf} data structure, which efficiently transfers data between the kernel and
-userspace. When a disallowed system call happens, a struct containing syscall
-number and offending \ac{pid} is written to the ringbuffer and quickly read by
-userspace. Figure~\ref{fig:intervention-flowchart} visualises this procedure.
+user space. When a disallowed system call happens, a struct containing the offending \ac{pid} is written to the ringbuffer and quickly read by
+user space. Figure~\ref{fig:intervention-flowchart} visualises this procedure.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8 \linewidth]{./diagrams/profiling-flow.drawio.pdf} 
+\includegraphics[width=\linewidth]{./diagrams/profiling-flow.drawio.pdf} 
 \caption{Flowchart illustrating the intervention strategies based on the
 configured mode when a non-whitelisted system call occurs. Actions are separated
 into BPF (Kernel) and Frontend (User Space) lanes.}
@@ -425,8 +409,8 @@ The \ac{bpf} program will return with exit code 0 in warn mode. In ``kill
 all'' mode, \af uses \texttt{BPF\_SEND\_SIGNAL()} to kill the current process
 before exiting with code 0.
 
-The userspace code will act differently upon receiving a packet in the
-ringbuffer. If warn mode is enabled, it will just log the fact that a \ac{pid}
+The user space code will act differently upon receiving a packet in the
+ringbuffer. If warn mode is enabled, it will just log the fact that a process
 tried to make a disallowed system call. In kill-all mode, it will iterate through
 every \ac{pid} in the ``follow'' map and send a \texttt{SIGKILL} to each
 process.
@@ -438,7 +422,7 @@ during execution are inevitable and are handled robustly.
 
 Map lookups often return a pointer to some data. If the lookup fails, the
 pointer will be null. Every single pointer is checked (enforced by the \ac{bpf}
-verifier), and if any are null, a \textbf{stat is logged} before the program
+verifier), and if any are null, a \textit{stat is logged} before the program
 exits.
 
 These stats are written to a ``stats'' map, which counts the occurrence of
@@ -447,13 +431,8 @@ conditions, so the \texttt{\_\_sync\_fetch\_and\_update()} function was used to
 increment stat counts atomically. When run in verbose mode, the contents of the
 stats map will be read and dumped to \ac{stdout} by the frontend.
 
-The stats map is implemented as a \texttt{BPF\_MAP\_TYPE\_ARRAY} and is indexed
-by the \texttt{STAT\_TYPE} enum. A helper function, \texttt{log\_stat()}, was
-written, which took an enum option, $i$, as an argument and incremented the value
-of the stats map array at index $i$ by one.
-
 While simple, this allows for fine-grained visibility into the \ac{bpf} program.
-A stat is recorded at every point the program could exit - a list of recorded
+A stat is recorded at every point the program could exit -- a list of recorded
 stats are included in Listing~\ref{lst:stat-enum}. Using an array over a
 ringbuffer was done to reduce code complexity in the frontend (as no goroutine
 reading the ringbuffer is needed), and we do not need the real-time capabilities
@@ -481,49 +460,42 @@ Appendix~\ref{tab:profile-info}. Profiling information was used to identify that
 finding the system call site was the slowest step of \af before the optimisation
 discussed in Section~\ref{subsubsec:impl-find-site-opt} was applied.
 
-Gathering profile data was implemented with a ringbuffer despite the extra
-implementation complexity over an array with atomic read/writes. This design was
-needed to guarantee that every call record would be consumed by the frontend since a 
-simple array risked having entries overwritten before they could be processed.
-If the ringbuffer is full, then a stat is recorded in the stats map, and no
-profiling information is recorded for that execution.
-
 Timestamps were recorded after every stage of the filtering using the
 \texttt{bpf\_ktime\_get\_ns()} helper, which returned the \textbf{kernel time}:
 the number of nanoseconds elapsed since boot. This is a monotonically increasing
-counter which is not affected by leap seconds and other timing oddities \cite{ebpf-bpf-ktime-get-ns-2025}. In the
-case that a failure occurs during one of the stages of \afss,~the profiling data
-is discarded. This process is visualised in Figure~\ref{fig:profiling-data-flow}
-
+counter which is not affected by leap seconds and other quirks with timing
+\cite{ebpf-bpf-ktime-get-ns-2025, LAMPORT_CLOCKS}. In the
+case that a failure occurs during one of the stages of \af, the profiling data
+is discarded. This process is visualised in
+Figure~\ref{fig:profiling-data-flow}.
 
 \begin{figure}[hbpt]
 \centering
 \includegraphics[width=\textwidth]{./diagrams/profiling-flow-actual.drawio.pdf}
 \caption{A flowchart showing how profiling data is written to and parsed by
-userspace.}
+user space.}
 \label{fig:profiling-data-flow}
 \end{figure}
 
 Writing to a ringbuffer requires locking and is, therefore, an expensive
-operation. Therefore, we only included the code needed to profile the
-application when the \texttt{\#PROFILE} macro was defined at compile time.
+operation, so we only include the profiling code when the \texttt{\#PROFILE} macro
+is defined.
+
 We chose to use a regular ringbuffer over a 
 \texttt{BPF\_MAP\_TYPE\_PERF\_EVENT\_ARRAY} as we did not need all of the
 information that \texttt{perf} provides and would have made data processing
-unnecessarily complex.
+unnecessarily complex. A \texttt{BPF\_MAP\_TYPE\_ARRAY} would have been
+unsuitable here as we need the semantics of a buffer.
 
-In the frontend, a goroutine dedicated to reading the ringbuffer was spawned.
-Upon reading data, it computes the difference between the timestamps for each 
-packet in the ringbuffer and writes this information to a buffered \ac{io} 
-writer (\texttt{bufio}) in Go. This writer is flushed when the profiling 
-ringbuffer is closed: either if the user presses Ctrl-C, an error during 
-reading occurs, or the program being profiled finishes/trips the system call 
-filter.
+The frontend spawns a goroutine dedicated to reading the ringbuffer.
+Upon reading data, the goroutine computes the difference between the timestamps for each 
+packet in the ringbuffer and writes this information to a CSV file via a
+buffered writer (\texttt{bufio} in Go). 
 
 \subsection{Configuration and the Go Frontend}\label{subsec:impl-frontend}
 
-Accounting for roughly 60\% of the project's 5,100 \ac{loc}, the frontend handles 
-everything from the \ac{cli} and BPF  map/data structure initialisation, to 
+Accounting for roughly 60\% \af's 3,900 \ac{loc}, the frontend handles 
+everything from the \ac{cli} and BPF map/data structure initialisation, to 
 launching the program, capturing live data via ringbuffers, and inspecting 
 map contents after execution. A flow chart showing an overview of the frontend's
 functionality is provided in Figure~\ref{fig:frontend-flowchart}.
@@ -535,8 +507,8 @@ functionality is provided in Figure~\ref{fig:frontend-flowchart}.
 \label{fig:frontend-flowchart}
 \end{figure}
 
-The \ac{cli} is built using the \texttt{urfave/cli/v2} Go framework. It provides
-the main command to filter an application, ``\af'', which also takes a whitelist
+The \ac{cli} is built using the \texttt{urfave/cli/v2} Go framework which provides
+the main command to filter an application, ``\af''. \af takes a whitelist
 (generated by \texttt{afgen /path/to/executable args/...}) and an
 executable and its arguments. 
 
@@ -573,14 +545,14 @@ the maps that \af will need during execution. This involves parsing the
 supplied whitelists and loading them into the ``whitelists'' map. 
 
 We also need to populate the \texttt{libc\_ranges} map introduced in
-Section~\ref{subsubsec:impl-find-site-opt} with the filtered processes \ac{libc}
-start and end addresses. Due to \ac{aslr}, this must be done once the process
-has already been spawned. 
+Section~\ref{subsubsec:impl-find-site-opt} with the filtered process's \ac{libc}
+start and end addresses. 
 
-We also need to add the spawned process's \ac{pid} to the ``follow'' map to
-activate the filter. Again, this needs to be done after the process has been
-spawned, as before then, we do not know its \ac{pid}. This design's key limitation: \textbf{there will be a period of time during program startup where \af 
-does not protect the filtered application}.
+We activate the filter by adding the spawned process's \ac{pid} to the
+``follow'' map after the process has been spawned. Before we spawn the process, we do not know
+its \ac{pid} and cannot find its \ac{libc} address. This means that \textbf{there will be a period of time during program startup where \af 
+does not protect the filtered application}, and is this implementation's key
+limitation.
 
 \subsubsection{Spawning the executable} \label{subsubsec:spawning-exec}
 
@@ -596,20 +568,18 @@ Care needs to be taken when configuring the command to ensure we do not
 introduce a security flaw. A user needs the \texttt{CAP\_SYS\_ADMIN} privilege
 to attach \iac{bpf} program, and therefore \af needs to be run by a user with
 the \texttt{CAP\_SYS\_ADMIN} privilege. However, since we are spawning an
-executable via an \texttt{execve} system call (\texttt{Command.Start} uses
-\texttt{execve} behind the scenes), the filtered process will also inherit the
+executable via an \texttt{execve()} system call (\texttt{Command.Start())} uses
+\texttt{execve()} behind the scenes), the filtered process will also inherit the
 \texttt{CAP\_SYS\_ADMIN} privileges.
 
 Our threat model (Section \ref{subsec:objs-assumpions-tm}) assumed that an attacker
 had compromised the filtered application. If the filtered application had
 \texttt{CAP\_SYS\_ADMIN} privileges, then an attacker might be able to change
-information in the \ac{bpf} maps that \af relies on and evade filtering. If an
-attacker could remove all \acp{pid} from the follow map, they would render
-\af completely useless. 
+information in the \ac{bpf} maps that \af relies on and evade filtering. 
 
-Therefore, we took care to \textbf{change the UID of the process being spawned}
-to an arbitrary number (we chose 1000). This has the effect of
-\textbf{de-privileging the filtered application} and ensuring that no adversary
+Therefore, we took care to \textit{change the UID of the process being spawned}
+to an arbitrary number (we chose 1003). This has the effect of
+\textit{de-privileging the filtered application} and ensuring that no adversary
 can alter key \ac{bpf} data structures.
 
 % 1. User launching a process filtered by addrfilter needs CAP_SYS_ADMIN
@@ -627,7 +597,7 @@ a \texttt{LibcRange}  struct. The \texttt{LibcRange} struct holds the start and 
 address of \ac{libc}.
 
 \texttt{findLibc()} finds the start and end address of \ac{libc} by parsing the
-\texttt{/proc/PID/maps} pseudofile in userspace. Each line of \texttt{/proc/PID/maps}
+\texttt{/proc/PID/maps} pseudofile in user space. Each line of \texttt{/proc/PID/maps}
 contains information about \texttt{vm\_area\_struct} struct in the process's \ac{vma}. We
 built a regular expression to match each line of \texttt{/proc/PID/maps} and
 used match groups to extract the \texttt{vm\_area\_struct} struct's start and end address.
@@ -636,19 +606,10 @@ and set these to be \acg{libc} start and end addresses.
 
 We found in development that we would sometimes begin parsing the pseudofile
 before the linker had loaded each \texttt{vm\_area\_struct} struct. This led to
-\af exiting reporting that \textit{no \ac{libc} addresses were found}, and in
+\af exiting reporting that \textit{no} \ac{libc} \textit{addresses were found}, and in
 the worst case, confusing bugs where system call sites were incorrectly being marked as 
-having come from \ac{libc}. This happened as parsing started while the
-linker was loading \ac{libc}, so some \ac{libc} addresses were not being skipped
-when finding the system call site.
-
-The fix here was to add retry logic to the parsing. If no \ac{libc} was found,
-we increment a retry counter, close the file, and retry parsing. Each time
-we parse, we count the number of lines in the pseudofile: if \ac{libc} is found,
-we close and reopen the file and check its line count. If they are the
-same, we know we have accounted for every \texttt{vm\_area\_struct} struct 
-mapped to \ac{libc}.
-
+having come from \ac{libc}. Once we added retry logic to our parser, these 
+errors subsided.
 
 \subsubsection{Exiting Gracefully}
 
@@ -658,7 +619,7 @@ to handle graceful exits.
 
 Each long-lived function\footnote{Examples of long-lived functions are functions
 that read from ringbuffers in an infinite loop and child processes spawned using
-\texttt{os/exec}.} is passed an objecting implementing the 
+\texttt{os/exec}.} is passed an object implementing the 
 \texttt{context.Context} interface as a parameter. These functions all wait to
 receive on the \texttt{Context.Done()} channel: when they receive word that the
 context is done, we configured the functions to clean up resources and exit. 
@@ -682,7 +643,7 @@ the stats map before exiting and dump its contents to \ac{stdout} as JSON.
 % Unwinding the stack is brittle (rely on FPs; other trampolines (ftrace) can 
 % break the process; bpf_get_stack() a bit cursed.
 % bpf tracing interference with \af enabled: trampolines used by kfuncs can
-% interfere with how the userspace stack is represented, with 0s (normally
+% interfere with how the user space stack is represented, with 0s (normally
 % signalling the end of the stack) being placed in the middle of the stack TODO:
 % cite that lvn thing I sent to father.
 
@@ -696,8 +657,8 @@ discussed in detail.
 \subsubsection{Whitelist Generation}\label{subsubsec:impl-whitelist-gen}
 
 Generating whitelists for \af involved a lot of the same steps as the filtering
-program, so it did not require much engineering effort. To be able to reuse code,
-we structured our code base carefully: \ac{bpf} maps and common data structures
+program. To share code between the tools, we structured our code base carefully:
+\ac{bpf} maps and common data structures
 were kept in the \texttt{bpf/} directory, with the filtering program and
 whitelist generation program kept in \texttt{bpf/filter/} and
 \texttt{bpf/wlgen/} directories respectively. This exercise was complicated by
@@ -705,10 +666,11 @@ the fact that the \ac{bpf} toolchain does not provide a linker, so workarounds
 included \texttt{\#include}-ing \ac{bpf} source files.
 
 The \ac{bpf} program reused the fork following system call site identification and
-filename finding functionality from \afss. Instead of checking to see if a
-system call is on in the whitelist, we add the syscall number. 
+filename finding functionality from \af. Instead of checking a pre-existing 
+whitelist, we add the syscall number to the whitelist we are generating. 
 
-The frontend for the generation functionality spawns the application similarly as \af and allows for the same debug/profiling options. Instead of parsing a
+\texttt{afgen}'s frontend spawns the application similarly as \af and allows for
+the same debug/profiling options. Instead of parsing a
 whitelist and writing this to the whitelists map, the map starts empty. Then,
 when the application exits, the whitelist map is read, and whitelists are
 marshalled.
@@ -717,9 +679,7 @@ The whitelist generation suffers the same blind spot as \af in its early stages
 of execution due to the need to find the \ac{libc} address before being able to
 start filtering. This did not prove problematic during the Evaluation phase, so
 it is an acceptable solution to whitelist generation for the purposes of this
-report. Note that in production, dynamic-analysis based generation is \textbf{a
-bad idea}, as it can easily lead to false positives, which will unnecessarily
-kill an application.
+report. 
 
 \subsubsection{Seccomp Filtering for Evaluation}\label{subsubsec:syso-impl}
 
@@ -737,17 +697,15 @@ spawning code.
 
 We started by creating a seccomp filter with \texttt{libseccomp.NewFilter()}, 
 and set its default action to \texttt{libseccomp.KillProcess}. We then parsed
-and flattened the (\afss)~ whitelist passed to \texttt{af-seccomp} via the
-\ac{cli}, and added an \texttt{libseccomp.Allow} rule for each system call number in
+and flattened the (\af) whitelist passed to \texttt{af-seccomp} via the
+\ac{cli}, and added a \texttt{libseccomp.Allow} rule for each system call number in
 the whitelist.
 
 \subsubsection{Calculating Privilege Reduction}
 
 To calculate the privilege reduction gained by using \af, we implemented a
 tool called \texttt{syso}. It is an evaluation tool that uses dynamic analysis
-to track which shared libraries make which system calls. It does
-stack-unwinding in the kernel and aligns the addresses with values in
-\texttt{/proc/PID/maps}. 
+to track which shared libraries make which system calls.
 
 When execution finishes, \texttt{syso} writes a report to \ac{stdout} with three
 figures: the privilege score of the application filtered with seccomp, the

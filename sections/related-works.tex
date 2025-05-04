@@ -7,20 +7,21 @@ impacts on a diverse set of benchmarks, we turn our attention to discussing how
 \subsection{History of System Call Filtering}
 
 System call filtering first appeared in literature in the 1990s with seminal
-works like \textcite{wagner1999janus}, and leveraged
-user space techniques \cite{somayaji2000automated, garfinkel2004ostia}. The world-switching associated with a user-space solution made
+works like \textcite{wagner1999janus}, and predominantly implemented filtering
+logic in user space \cite{somayaji2000automated, garfinkel2004ostia}. 
+The world-switching associated with these user space solutions made
 system call filtering too slow for production use.
 
-System call filtering was added to the Linux Kernel in 2005 by Andrea Arcangeli, but
+In 2005, Andrea Arcangeli created seccomp -- an in-kernel system call filtering
+solution. Seccomp was added to the Linux that year, but
 saw slow adoption with Linus Torvalds asking if anyone used seccomp in
-2009 \cite{arcangeli_seccomp_2005, TORVALDS_ANYONE_USES_SECCOMP}. Seccomp was
-faster than the research prototypes from the early 2000s as it used in-kernel
-filtering logic \cite{jia2023programmablesecurityebpf}.
+2009 \cite{arcangeli_seccomp_2005, TORVALDS_ANYONE_USES_SECCOMP}. 
 
 In the past 16 years, system call filtering has become increasingly common.
-Seccomp is the industry standard and is now widely supported. Chromium, OpenSSH,
-Qemu, Docker, Android, Package Managers, and emulation tooling all run with
-seccomp filters.
+Seccomp is the industry standard and is now widely supported. Chromium
+\cite{chromium_sandboxing}, OpenSSH \cite{openssh60}, Docker \cite{docker_seccomp}, Android \cite{android_seccomp_oreo}, Package
+Managers \cite{flatpak_seccomp_profile}, and emulation tooling all run with
+seccomp filters by default.
 
 \subsection{Fine-Grained Filtering Research}
 
@@ -35,7 +36,7 @@ precise filters are applied to an application
 different points in time \cite{SYSPART, TEMPORAL_SPEC}. Temporal syscall
 filters rely on accurate phase detection, and any misidentification or delay
 switching filters can create brief but exploitable windows where security
-policies are not fully enforced. 
+policies are not fully enforced \cite{TEMPORAL_SPEC}. 
 
 SysPart \cite{SYSPART} heavily inspired \af as it also
 looks at fine-grained system call filtering. SysPart focuses on \textit{temporal
@@ -48,9 +49,10 @@ applications often exhibit different startup and steady-state behaviour.
 
 FreePart \cite{ahad2023freepart} is another isolation tool that applies
 system call filters based on temporal specialisation. It observes that privileges, including system calls, are designed for data processing applications
-and often align with the specific \acp{api} used during execution. While
-conceptually similar to \af, FreePart differs in two ways: it goes
-beyond system call filtering and dynamically changes filters based on
+and often align with the specific \acp{api} (e.g. TensorFlow
+\cite{tensorflow2015}, OpenCV \cite{opencv_library}) used during execution. While
+conceptually similar to \af, FreePart differs in two ways: its scope is broader
+than just system call filtering, and it dynamically changes filters based on
 the program's execution phase. \af, however, is a spatially scoped filtering
 model, applying distinct system call whitelists to file-backed memory regions.
 We enable per-library privilege enforcement rather than relying on execution 
@@ -62,13 +64,14 @@ focuses on subprocesses. Seccomp (and \af) \textit{pass down} filters from
 parent to child processes, meaning whitelists must be permissive enough
 to cover both the parent and child processes. SysXCHG replaces the child
 process's filter, allowing it to be \textit{more precise} than a filter which
-must cover both processes.
+must cover both processes. SysXCHG solves a different problem to \af -- one of
+privilege inheritance across \texttt{execve()} calls.
 
 \subsection{Whitelist Generation}
 
 While orthogonal to our work, whitelist generation remains a key part of
-effective system call filtering solutions. Recall that we used \texttt{afgen} -
-a dynamic analysis-based tool - to generate \af whitelists, as no current
+effective system call filtering solutions. Recall that we used \texttt{afgen} --
+a dynamic analysis-based tool -- to generate \af whitelists, as no current
 tooling can generate per-shared library whitelists. This is a limitation
 of our current approach, so we investigate some work in static analysis
 whitelist generation.
@@ -111,8 +114,8 @@ from executing code from other parts of the address space, making them unsuitabl
 \af).
 
 Finally, it is worth noting that \af itself falls under the umbrella of software
-compartmentalisation research, as \af, enables programs to run per
-the \ac{polp} \cite{SALTZER_SCHROEDER}.
+compartmentalisation research, as \af restrits the set of system calls a process
+can make as per the \ac{polp} \cite{SALTZER_SCHROEDER}.
 
 \subsection{\ac{bpf} in Security}\label{subsec:bpf-in-security}
 

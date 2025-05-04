@@ -1,46 +1,52 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.15 Chrome/134.0.6998.205 Electron/35.2.1 Safari/537.36" version="26.2.15">
   <diagram name="Page-1" id="Lw-xK5uONCsS2UEiDsAL">
-    <mxGraphModel dx="1234" dy="898" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1234" dy="917" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-1" value="Kernel Space" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="1" vertex="1">
-          <mxGeometry x="240" y="490" width="560" height="210" as="geometry" />
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-1" value="Kernel Space" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fontSize=17;" parent="1" vertex="1">
+          <mxGeometry x="240" y="490" width="570" height="210" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-8" value="&lt;font face=&quot;Courier New&quot;&gt;raw_tp/sys_enter&lt;/font&gt;&lt;div&gt;Instrumentation Point&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-8" value="&lt;font face=&quot;Courier New&quot;&gt;raw_tp/sys_enter&lt;/font&gt;&lt;div&gt;Instrumentation Point&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;labelBackgroundColor=none;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" vertex="1">
           <mxGeometry x="30" y="10" width="210" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;shape=link;strokeWidth=2;labelBackgroundColor=none;fontColor=default;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" source="h68JlARCK2-a_7TLO-Ol-17" target="h68JlARCK2-a_7TLO-Ol-8" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;shape=link;strokeWidth=2;labelBackgroundColor=none;fontColor=default;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" source="h68JlARCK2-a_7TLO-Ol-17" target="h68JlARCK2-a_7TLO-Ol-8" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;startArrow=classic;startFill=1;strokeWidth=1;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" source="h68JlARCK2-a_7TLO-Ol-17" target="h68JlARCK2-a_7TLO-Ol-20" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;startArrow=classic;startFill=1;strokeWidth=1;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" source="h68JlARCK2-a_7TLO-Ol-17" target="h68JlARCK2-a_7TLO-Ol-20" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-17" value="&lt;font face=&quot;Courier New&quot;&gt;addrfilter&lt;/font&gt;&lt;div&gt;core filtering logic&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-17" value="&lt;font face=&quot;Courier New&quot;&gt;addrfilter&lt;/font&gt;&lt;div&gt;core filtering logic&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" vertex="1">
           <mxGeometry x="70" y="110" width="120" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-20" value="" style="swimlane;startSize=0;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" vertex="1">
-          <mxGeometry x="250" y="10" width="290" height="190" as="geometry" />
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-20" value="" style="swimlane;startSize=0;labelBackgroundColor=none;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-1" vertex="1">
+          <mxGeometry x="250" y="10" width="310" height="190" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-15" value="eBPF Maps" style="shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-20" vertex="1">
-          <mxGeometry x="159" y="45" width="125" height="100" as="geometry" />
+        <mxCell id="aWhQj_AoehRZo7hpM7BB-2" value="" style="shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;labelBackgroundColor=none;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=17;" vertex="1" parent="h68JlARCK2-a_7TLO-Ol-20">
+          <mxGeometry x="177.64" y="42.5" width="125" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-32" value="" style="group;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-20" vertex="1" connectable="0">
+        <mxCell id="aWhQj_AoehRZo7hpM7BB-1" value="" style="shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;labelBackgroundColor=none;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=17;" vertex="1" parent="h68JlARCK2-a_7TLO-Ol-20">
+          <mxGeometry x="165" y="47.5" width="125" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-15" value="eBPF Maps&amp;nbsp;" style="shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;labelBackgroundColor=none;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-20" vertex="1">
+          <mxGeometry x="150" y="53.5" width="125" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-32" value="" style="group;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-20" vertex="1" connectable="0">
           <mxGeometry x="18" y="33" width="153.64" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-30" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;hachureGap=4;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;sketch=1;curveFitting=1;jiggle=2;fillColor=#f8cecc;strokeColor=#b85450;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-32" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-30" value="" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;hachureGap=4;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;fillColor=#f8cecc;strokeColor=#b85450;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-32" vertex="1">
           <mxGeometry width="130" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-31" value="&lt;font face=&quot;Helvetica&quot;&gt;Warn Ringbuffer&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;hachureGap=4;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;sketch=1;curveFitting=1;jiggle=2;strokeColor=light-dark(#b95450, #ededed);fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-32" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-31" value="&lt;font face=&quot;Helvetica&quot;&gt;Warn Ringbuffer&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;hachureGap=4;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;strokeColor=light-dark(#b95450, #ededed);fontSize=16;" parent="h68JlARCK2-a_7TLO-Ol-32" vertex="1">
           <mxGeometry x="24.37557692307692" y="24.375" width="81.25" height="81.25" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-2" value="User Space" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="1" vertex="1">
-          <mxGeometry x="240" y="160" width="560" height="200" as="geometry" />
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-2" value="User Space" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fontSize=17;" parent="1" vertex="1">
+          <mxGeometry x="240" y="160" width="570" height="200" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-3" value="CLI" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-3" value="CLI" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
           <mxGeometry x="40" y="20" width="120" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;entryX=0.5;entryY=1;entryDx=0;entryDy=0;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-4" target="h68JlARCK2-a_7TLO-Ol-6" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-4" target="h68JlARCK2-a_7TLO-Ol-6" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="180" y="180" as="targetPoint" />
             <Array as="points">
@@ -49,10 +55,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-4" value="&lt;font face=&quot;Courier New&quot;&gt;\proc\PID\maps&lt;/font&gt;&lt;div&gt;&lt;font face=&quot;Verdana&quot;&gt;Parser&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-4" value="&lt;font face=&quot;Courier New&quot;&gt;\proc\PID\maps&lt;/font&gt;&lt;div&gt;&lt;font face=&quot;Verdana&quot;&gt;Parser&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
           <mxGeometry x="40" y="100" width="145" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;sketch=1;hachureGap=4;jiggle=2;curveFitting=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;strokeWidth=2;startArrow=classic;startFill=1;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-5" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-40" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;strokeWidth=2;startArrow=classic;startFill=1;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-5" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="390" y="330" as="targetPoint" />
             <Array as="points">
@@ -62,31 +68,31 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;sketch=1;hachureGap=4;jiggle=2;curveFitting=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-5" target="h68JlARCK2-a_7TLO-Ol-9" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-5" target="h68JlARCK2-a_7TLO-Ol-9" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-5" value="Ringbuffer&lt;div&gt;Reader&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#f8cecc;strokeColor=#b85450;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-5" value="Ringbuffer&lt;div&gt;Reader&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#f8cecc;strokeColor=#b85450;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
           <mxGeometry x="335" y="20" width="105" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-6" value="Maps&lt;div&gt;Reader/Writer&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-6" value="Maps&lt;div&gt;Reader/Writer&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
           <mxGeometry x="335" y="100" width="110" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-9" value="Userspace Intervention" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-9" value="Userspace Intervention" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
           <mxGeometry x="195" y="20" width="110" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-10" target="h68JlARCK2-a_7TLO-Ol-6" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" source="h68JlARCK2-a_7TLO-Ol-10" target="h68JlARCK2-a_7TLO-Ol-6" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-10" value="Whitelist&amp;nbsp;&lt;div&gt;Parser&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;sketch=1;curveFitting=1;jiggle=2;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-10" value="Whitelist&amp;nbsp;&lt;div&gt;Parser&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=17;" parent="h68JlARCK2-a_7TLO-Ol-2" vertex="1">
           <mxGeometry x="195" y="100" width="110" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-26" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;labelBackgroundColor=none;fontColor=default;sketch=1;curveFitting=1;jiggle=2;fontSize=17;" parent="1" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-26" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;labelBackgroundColor=none;fontColor=default;fontSize=17;" parent="1" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="200" y="440" as="sourcePoint" />
             <mxPoint x="840" y="440" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="h68JlARCK2-a_7TLO-Ol-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;sketch=1;hachureGap=4;jiggle=2;curveFitting=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;strokeWidth=2;startArrow=classic;startFill=1;fontSize=17;" parent="1" source="h68JlARCK2-a_7TLO-Ol-6" target="h68JlARCK2-a_7TLO-Ol-20" edge="1">
+        <mxCell id="h68JlARCK2-a_7TLO-Ol-39" style="edgeStyle=orthogonalEdgeStyle;rounded=0;hachureGap=4;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;strokeWidth=2;startArrow=classic;startFill=1;fontSize=17;" parent="1" source="h68JlARCK2-a_7TLO-Ol-6" target="h68JlARCK2-a_7TLO-Ol-20" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

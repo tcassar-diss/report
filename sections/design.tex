@@ -6,7 +6,7 @@ represent more chances for vulnerabilities to appear. Therefore, it was
 important to design \af to be \textit{as minimal as possible} while
 fulfilling the promise of the proposed fine-grained filtering.
 
-We defined a threat model to do this and let primary requirements and
+We start by defining a threat model and let primary requirements and
 engineering assumptions follow. The project's nature also requires some auxiliary
 tooling, which we discuss after we present \af's design. 
 
@@ -43,8 +43,8 @@ bypass compartmentalisation.
 
 For completeness, we assume 5) that the attacker does not already have a 
 kernel-level exploit and that the process they compromised does not have root
-access. These scenarios are out of scope as a kernel-level exploit effectively gives the
-attacker root access to the host, which results in complete system compromise.
+permissions. These scenarios are out of scope as a kernel-level exploit effectively gives the
+attacker root access to the host, which invariably results in complete system compromise.
 
 % end Threat Model
 
@@ -52,13 +52,13 @@ attacker root access to the host, which results in complete system compromise.
 
 Having defined a threat model, we can define and list our objectives.
 
-Our primary objective is to design a system that detects when an application
+Our primary aim is to design a system that detects when an application
 makes a disallowed system call. Our solution, \af,  must locate the call's origin
 within the \ac{vma} and confirm that this memory region has the
 appropriate permissions to make the call.
 
-If \af detects a disallowed system call, it must intervene in one of three (user
-configurable) ways: either it must kill the offending process, warn the user, or
+If \af detects a disallowed system call, it must intervene in one of three user
+configurable ways: it must kill the offending process, warn the user, or
 kill every process currently protected by the filter. These options allow the user to
 choose the trade-off between availability and data integrity/confidentiality on
 a per-application basis.
@@ -78,61 +78,56 @@ To summarise:
     \item \af \textit{shall} associate a distinct system call whitelist with each unique file-backed region within a process's \ac{vma}.
     \item \af \textit{shall} \textbf{identify the specific memory region} within the \ac{vma} from which a system call originates. If the invoked system call is not included in the whitelist associated with that originating region, \af \textit{shall} \textbf{trigger an intervention}.
     \item The intervention action taken by \af upon detecting a non-whitelisted system call \textit{shall} be \textbf{configurable by the user}. The available configuration options \textit{shall} include, at minimum, (a) logging a warning, (b) terminating the process that issued the disallowed system call, and (c) terminating all processes being monitored by \af.
-    \item \af \textit{shall} demonstrably achieve a \textbf{greater reduction in process privileges} compared to a standard Linux seccomp filter configuration. We aim to achieve this security enhancement while incurring a runtime performance overhead deemed acceptable within pre-defined limits.
-    \item The privilege reduction afforded by \af must be able to be quantified
-        with a newly proposed metric.
+    \item \af \textit{shall} demonstrably achieve a \textbf{greater reduction in
+        process privileges} compared to a standard Linux seccomp filter
+        configuration. We aim to achieve this security enhancement while
+        incurring an acceptable runtime performance overhead.
+    \item The privilege reduction afforded by \af \textit{shall} be able to be
+        \textbf{quantified
+        with a newly proposed metric}.
 \end{enumerate}
 
-Given the novel nature of this solution, we cannot use readily available
-whitelist generators, as no current solutions identify system call
-invocation sites. Therefore, we must implement our own \textit{automated whitelist 
+Given the novelty of this solution, no tooling exists that will generate
+per-\ac{vma} whitelists. Therefore, we must implement our own \textit{automated whitelist 
 generation tool}, \texttt{afgen}. Whitelist generation is a separate research problem and is
-orthogonal to our proposed solution. Similarly, we need tooling to identify an
-application's system calls for evaluation purposes. For this, we implement
-\texttt{syso}.
+orthogonal to our proposed solution but is needed for development. 
+Similarly, we need tooling to identify an application's system calls for
+evaluation purposes. For this, we implement \texttt{syso}.
 
 % end Objectives
 
-
-
-Alongside security assumptions, we also make some engineering assumptions when
-implementing \af reserved for rare cases requiring significant engineering. In these cases, we make some \textit{simplifying
-assumptions}. This was done primarily to avoid adding unnecessary code and 
-complexity to \afg design. 
+Alongside our aims, we also make some \textit{simplifying assumptions}, 
+reserved for rare cases requiring significant added complexity. These 
+assumptions are primarily to avoid adding unnecessary code to
+\af's design. 
  
-One of these is handling the case where \acg{libc} address space changes during
-execution. This is technically possible but is rarely seen in production -
-furthermore, it allows for performance optimisation opportunities, as detailed in
-Section~\ref{subsubsec:impl-find-site-opt}.
+We assume that \acg{libc} position in the \ac{vma} is fixed across the process's
+lifetime. It is technically possible for \acp{libc} position to change but is
+rarely seen in production and would require significant added complexity to
+address.
 
-Care needs to be taken to ensure that this assumption does not introduce a
-security risk during the implementation (see Section~\ref{subsubsec:impl-find-site-opt}). 
-System calls made in the case where \ac{libc} has been changed should be
+We take care to ensure that this assumption does not introduce a
+security risk in Section~\ref{subsubsec:impl-find-site-opt}. 
+System calls made in the case where \ac{libc} has been changed are
 treated as disallowed system calls.
 
 We also assume that the \texttt{\_\_code\_\_} section of the \ac{libc}
 executable is mapped contiguously in memory. Again, this is
 true (almost) without exception\footnote{Custom patches to the kernel could
-violate this invariant} and allows \af to determine if a given system quickly
-call instruction was made from within \ac{libc}.
+violate this invariant} \cite{glibc-dl-map-segments-h} and allows \af to determine if a given system 
+call instruction was made from within \ac{libc} quickly.
 
 It is also important to note that this assumption does not introduce a security
 risk due to the way that system call site identification is implemented and shown in
-Section \ref{subsubsec:impl-find-site-opt} \cite{glibc-dl-map-segments-h}.
+Section \ref{subsubsec:impl-find-site-opt} .
 
-The limitations of this design are linked to these assumptions. If \acg{libc}
-address is not contiguous, then \af will not be able to find non-\ac{libc}
-addresses correctly. This will result in system calls being marked as having 
-\ac{libc} as a call site, which will result in the system call filter being
-tripped as discussed in Section \ref{subsubsec:err-handling}. 
-
-The other obvious limitation of this design is that it only makes sense for
+The obvious limitation of this design is that it only makes sense for
 dynamically linked executables. Statically linked executables do not make use of
 shared libraries, and therefore, making filters for each shared library does not
 make sense.
 
 With the relevant background fully explained and the requirements defined, we
-can move on to presenting the design of \afss.~ 
+now present the design of \af. 
 
 \subsection{Architecture} \label{subsec:arch}
 
@@ -143,33 +138,33 @@ can move on to presenting the design of \afss.~
     \label{fig:arch-overview}
 \end{figure}
 
-\af is comprised of a (kernel-space) backend and a user-space frontend.
+\af is comprised of a (kernel space) backend and a (user space) frontend.
 \ac{bpf} maps and ringbuffers are used to allow the backend and frontend to
 communicate. The frontend is responsible for spawning the filtered application,
 handling configuration, and \textit{attaching} the \ac{bpf} program to its
 tracepoint (discussed further in Section \ref{sec:implementation}).
 
-The backend of \af is made up of a single \ac{bpf} program and \ac{bpf}
-maps/ringbuffers to communicate with user-space.
+The backend of \af is made up of a single \ac{bpf} program and a selection of \ac{bpf}
+maps/ringbuffers to communicate with user space.
 The program is attached to a \textit{raw tracepoint} and runs every time
 \textit{any process} makes a system call.
 
-\subsubsection{Determining Which system calls to
+\subsubsection{Determining Which System Calls to
 Filter}\label{subsec:design-fork-following}
 
 This means \af needs a way to identify which system calls were made by the
-protected app. \acp{pid} of filtered processes
-need to be stored in \iac{bpf} map. Then, on every system call, we check if the
-called process's \ac{pid} is in the map of filtered processes. If not, ignore
+protected app. To do this, we store the \acp{pid} of filtered processes
+in \iac{bpf} map. Then, on every system call, we check if the
+called process's \ac{pid} is in the map of filtered processes. If not, we ignore
 the system call. Otherwise, we continue with the filtering.
 
 We also want to apply the filter to any child processes the
 application might create - this is called \textit{fork following}. The reason for this is two-fold: a typical workflow for
-web servers (such as nginx) \cite{apache-prefork-2.4, nginx-inside-performance-scale-2015} is to fork on receiving a request; the second is
+web servers (such as Apache, Nginx) \cite{apache-prefork-2.4, nginx-inside-performance-scale-2015} is to fork on receiving a request; the second is
 that if a \ac{ta} could call fork() to remove the system call filter, our
 solution would not be secure. Fork following is visualised in
-Figure~\ref{fig:fork-follow-process-tree} with two process trees. With fork
-following, each child process is protected by \af. Without it, children
+Figure~\ref{fig:fork-follow-process-tree} with two process trees. Fork
+following means each child process is protected by \af. Without it, children
 are left unprotected.
 
 \begin{figure}[ht]
@@ -195,17 +190,18 @@ library that actually made the system call.
 
 \subsubsection{Finding the system call Site}\label{subsubsec:find_syscall}
 
-Therefore, \af must find the \textit{first non-\ac{libc} return pointer in the
-user-space stack} and treat this address as the true system call site. In other
-words, we trace through the sequence of function calls that led to the system
-calls and find the first call that was not made by libc.
+Therefore, \af must find the \textit{first non-}\ac{libc} \textit{return pointer in the
+user space stack} and treat this address as the true system call site. 
+We trace through the sequence of function calls that led to the system
+calls and find the first call that was not made by \ac{libc}.
 
-For example, consider a ``hello, world'' program in C (see Listing~\ref{lst:hello-world}). \texttt{printf()} is a 
-function implemented in \ac{libc} which invokes the \texttt{write()} system call
-behind the scenes, which in turn will call the \texttt{syscall} x86
-instruction\footnote{This is a simplified stack trace: in \texttt{musl},
+Consider a ``Hello, World'' program in C (see Listing~\ref{lst:hello-world}). \texttt{printf()} is a 
+function implemented in \ac{libc} which invokes the \texttt{write()} system call,
+which calls the \texttt{syscall} x86
+instruction\footnote{This is a simplified stack trace: in \texttt{musl} -- a
+    ``simple'' \ac{libc} implementation --
 \texttt{write()} calls a wrapper function \texttt{system call\_cp\_c()}. However,
-the idea still holds.}. This means the user-space stack may look something like the stack
+the idea still holds.}. This means the user space stack may look like the stack
 presented in Figure~\ref{fig:hello-world-stack}
 
 \begin{figure}[h]
@@ -272,11 +268,11 @@ question of checking the process's \ac{vma} to find which memory region the
 function belongs to. 
 
 Each shared library exists in the \ac{vma} as a \textit{file-backed memory region}.
-In-kernel, the \ac{vma} is implemented as a \texttt{vma\_struct} struct with a
+In-kernel, the \ac{vma} is implemented as a \texttt{vm\_area\_struct} struct with a
 (indirect) reference to the name of its backing file. Thus, finding which
 shared library ``owns'' the system call site is a question of finding the
-corresponding \texttt{vma\_struct} struct and reading the filename.
-Alternatively, this information can be read from user-space via the
+corresponding \texttt{vm\_area\_struct} struct and reading the filename.
+Alternatively, this information can be read from user space via the
 \texttt{/proc/PID/maps} pseudofile.
 
 \begin{figure}[h]
@@ -297,15 +293,15 @@ retrieve some (pre-configured) whitelists. If the system call number is in the
 whitelist, no action is taken and the \ac{bpf} tracepoint returns with code 0.
 
 If the system call is not on the whitelist, \af will intervene. The intervention
-policy is user-configurable and has to be read from a config map. User-space is
+policy is user-configurable and has to be read from a config map. User space is
 informed that a system call has tripped the filter as the offending \ac{pid} is
 written to a ringbuffer. If the policy is set to kill the process (or all 
 processes in the \ac{pid} filtering map), \af sends a kill signal to the 
-offending \ac{pid}. 
+offending \ac{pid} from \ac{bpf}. 
 
-When user-space reads \iac{pid} from the ringbuffer, it acts according to how its user-defined configuration. \af logs a warning in warn mode, but in ``kill all'' mode, sends a 
+When user space reads \iac{pid} from the ringbuffer, it acts according to how its user-defined configuration. \af logs a warning in warn mode, but in ``kill all'' mode, sends a 
 kill signal to each \ac{pid} in the filtering map. This has to be
-done asynchronously (by user-space) as \ac{bpf} only allows you to send signals
+done asynchronously (by user space) as \ac{bpf} only allows you to send signals
 to the calling process. The pseudocode in
 Listing~\ref{lst:syscall-filter} and diagram in 
 Figure~\ref{fig:core-filter-flowchart} summarise the presented filtering logic.
@@ -327,14 +323,13 @@ the whitelist map. We looked to build on existing standards for defining
 system call whitelists but found none suitable for our use case. Seccomp filters,
 for example, are defined as a \iac{bpf} program - this isn't user-friendly and
 does not allow for mapping shared libraries to system call filters. Therefore, we defined our
-own standard: a very simple TOML file. An example is provided in
-Listing~\ref{lst:toml-whitelist}.
+own standard: a TOML file structured as in Listing~\ref{lst:toml-whitelist}.
 
 The frontend is also responsible for supporting performance optimisations
-discussed in Section \ref{sec:implementation}. One of these optimisations is
-to keep track of \acp{libc} address space in a map, as we assume \acp{libc} will not
+discussed in Section \ref{subsubsec:impl-find-site-opt}. One of these optimisations is
+to keep track of \acg{libc} address space in a map, as we assume \ac{libc} will not
 change. The frontend is responsible for finding the filtered app's \ac{libc}
-address range and storing it in a map.
+address range and storing it in a map before launch.
 
 Ensuring that frontend functionality, such as parsing whitelists, is correct is
 trivial with unit tests. Testing \ac{bpf}, however, is much more difficult.
@@ -361,19 +356,17 @@ Section~\ref{subsubsec:additional-tooling}.
 
 \subsection{Additional Tooling}\label{subsubsec:additional-tooling}
 
-The first additional tool that we implemented and \textit{built into \af} was
-the whitelist generator. This whitelist generator works via dynamic analysis,
-which is not a gold standard for whitelist generation. For this use case,
-however, we think this acceptable - whitelist generation is orthogonal to our
+We designed \texttt{afgen} to generate our whitelists. \texttt{afgen} works via dynamic analysis,
+which is not a gold standard for whitelist generation \cite{OPTIMUS}. For our
+use case, however, dynamic analysis is acceptable. Whitelist generation is orthogonal to our
 work and is its own field of research. We have implemented a generator here
-primarily to aid development and evaluation, but more work is needed to create a
+to aid development and evaluation, not to be used in production. More work is needed to create a
 production-ready generator based on static analysis.
 
 We implement the whitelist generator using a lot of the same functionalities of
 \af. The key difference is that after identifying the system call site, we write a
-system call number to the syscall site's map (recall that at this stage \af would
-check to see if the system call number was in the site's map and intervene if need
-be). When the program finishes executing (or on Ctrl-C), the frontend reads the
+system call number to the syscall site's map. When the program finishes executing
+(or on Ctrl-C), the frontend reads the
 contents of the \ac{bpf} whitelist map and marshals the results to a TOML file.
 The pseudocode is provided in Listing~\ref{lst:generator-pseudocode} and shows
 that the generation code heavily uses \afg functionality.
@@ -393,14 +386,5 @@ some raw data to disc for further post-processing: a JSON mapping from
 system call numbers to the number of times executed, broken down by library. An
 example of this is available in Listing~\ref{lst:syso-data-dump}.
 
-This section looked to motivate the minimalist design philosophy, threat model,
-and requirements for \af. We designed how \af should behave on each system call
-and discussed the need for kernel-space and user-space code. We also looked
-forward to evaluating our solution and designing required additional tooling.
-
-With these evaluation tools defined, the next step is to turn our design into a
-working solution. In Section \ref{sec:implementation}, we show how we implemented the raw 
-tracepoint attachment, BPF map structures, stack-unwinding logic and user-space 
-frontend to realise the filtering, whitelist generation, and 
-seccomp-wrapper utilities described above.
-
+Having specified \af's core filtering behaviour and additional tooling
+requirements, we move on to presenting \af's implementation.

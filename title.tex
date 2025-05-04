@@ -6,17 +6,15 @@
 %  addrfilter less badly than seccomp (same abs, smaller percentage) but this
 %  is future work
 
-
-System call filtering is a security technique to restrict process
+System call filtering is a security technique which restricts a process's
 privileges. It is widespread, found in container runtimes 
 \cite{docker_seccomp}, desktops \cite{chromium_sandboxing,
-firefox_seccomp}, and mobile systems \cite{android_seccomp_oreo} which
-restricts process privileges. Current
+firefox_seccomp}, and mobiles \cite{android_seccomp_oreo}. Current
 production systems apply a single coarse-grained policy to
 an entire application, making them too permissive and therefore suboptimal
 \cite{OPTIMUS}. 
 We propose \af: a novel, fine-grained, \textit{spatial} system call filter
-written in \ac{bpf}. \af is able to filter system calls based on  where in
+written in \ac{bpf}. \af is able to filter system calls based on where in
 the process's \ac{vma}, the system call was issued, thereby respecting the 
 \ac{polp}\cite{SALTZER_SCHROEDER}. Like this, we are able to use smaller, 
 more precise static filters based on code regions within the process's \ac{vma}.
@@ -46,12 +44,17 @@ of learning.
 \section*{Copyright}
 
 \begin{enumerate}
-    \item The author of this thesis (including any appendices and/or schedules to this thesis) owns certain copyright or related rights in it (the “Copyright”) and s/he has given The University of Manchester certain rights to use such Copyright, including for administrative purposes.
+    \item The author of this thesis (including any appendices and/or schedules
+        to this thesis) owns certain copyright or related rights in it (the
+        ``Copyright'' and s/he has given The University of Manchester certain rights to use such Copyright, including for administrative purposes.
 
     \item Copies of this thesis, either in full or in extracts and whether in
     hard or electronic copy, may be made \texttt{only} in accordance with the Copyright, Designs and Patents Act 1988 (as amended) and regulations issued under it or, where appropriate, in accordance with licensing agreements which the University has from time to time. This page must form part of any such copies made.
 
-    \item The ownership of certain Copyright, patents, designs, trade marks and other intellectual property (the “Intellectual Property”) and any reproductions of copyright works in the thesis, for example graphs and tables (“Reproductions”), which may be described in this thesis, may not be owned by the author and may be owned by third parties. Such Intellectual Property and Reproductions cannot and must not be made available for use without the prior written permission of the owner(s) of the relevant Intellectual Property and/or Reproductions.
+    \item The ownership of certain Copyright, patents, designs, trade marks
+        and other intellectual property (the ``Intellectual Property'') and any
+        reproductions of copyright works in the thesis, for example graphs and
+        tables (``Reproductions''), which may be described in this thesis, may not be owned by the author and may be owned by third parties. Such Intellectual Property and Reproductions cannot and must not be made available for use without the prior written permission of the owner(s) of the relevant Intellectual Property and/or Reproductions.
 
     \item Further information on the conditions under which disclosure,
         publication and commercialisation of this thesis, the Copyright and any
