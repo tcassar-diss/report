@@ -1,13 +1,104 @@
 \section{Introduction}
 
-In this report, we present \af -- a fine grained, spatially aware, system call
-filter for Linux. We begin this report by explaining why production systems use
-system call filters, and why we believe that current filtering tooling is
-suboptimal. We move onto how we implemented \af, and then to valito validation
-and evaluation.
+Modern cyber attacks increasingly target critical infrastructure, exploiting
+weaknesses in systems software to escalate privilege or exfiltrate sensitive
+data. Traditional system call filtering tools like \textit{seccomp} were designed when
+applications were smaller and more predictable, but modern software's growing
+complexity makes these filters less effective. Attackers now have more
+opportunities to execute malicious system calls without triggering these system
+call filters. 
 
-\subsection{Introducing System Call Filtering}
+We aim to address this gap with \af, a \textit{fine grained system call
+filtering solution} written in \ac{bpf}. \af accounts for where in the process's \ac{vma} each
+system call was made and applies smaller, more precise whitelists to
+different areas of the address space, significantly reducing privilege.
 
-Applications perform dangerous actions, such as mapping memory or forking, via the
-\textit{system call} \ac{os} \ac{api}. 
+\subsection{Context and Motivation}
 
+System call filtering is used to sandbox programs and is widely used. Mobiles,
+desktop application, containers, and emulation tooling all use system call
+filtering as a means of reducing process privilege. Production system call
+filtering is typically done by applying one single, static filter to an
+application. 
+
+When seccomp was released in 2005, this was a sensible choice as
+applications were small. \texttt{/bin/true} was \textit{zero} \ac{loc} when
+first released, and grew to $\sim2,300$ \ac{loc} by 2012. Similarly,
+\texttt{/bin/bash} grew from 11.3KB in Unix v5 (1974) to 1.4MB in Ubuntu 24.04.
+
+This trend towards larger executables and code bases means that original
+assumptions about \textit{application trust} are beginning to break down.
+\textit{Software compartmentalisation} is a defensive software design approach
+which moves past the idea that an application can be treated as a single unit of
+trust, and instead decomposes an application into several isolated, mutually
+distrusting compartments. This report adds to the growing body of literature on
+software compartmentalisation.
+
+\subsection{Aims}
+
+Building upon the concept of software compartmentalisation, this work
+proposes \af to enhance system call security through spatial
+differentiation based on the process \ac{vma}. Our contribution aims to:
+
+\begin{enumerate}
+    \item Implement a fully fledged spatial system call filtering solution capable of applying different filtering rules to a system call depending on which area of the \ac{vma} invoked it.
+    \item Implement our filtering logic within the Linux kernel, employing techniques such as stack unwinding and \ac{vma} analysis to accurately identify the originating code region for each system call.
+    \item Provide a significant level of privilege reduction when compared to seccomp.
+    \item Propose a probabilistic privilege reduction metric suitable for fine-grained spatial filtering. % (Reworded slightly for flow)
+    \item Implement auxiliary security analysis tooling to apply this metric. % (Reworded slightly for flow)
+    \item Validate that our core filtering logic does not impact correct system call functioning.
+    \item Assess the runtime performance introduced by \af{} over a diverse set of benchmark applications, compared against seccomp and unfiltered results.
+\end{enumerate}
+
+% Our primary aims are to 1) implement a fully fledged spatial system call filtering
+% solution capable of applying different filtering rules to a system call
+% depending on which area of the \ac{vma} invoked it. We aim to 2) implement our
+% filtering logic within the Linux kernel, employing techniques such as stack
+% unwinding and \ac{vma} analysis to accurately identify the originating code
+% region for each system call. 
+%
+% We aim to 3) provide a significant level of privilege reduction when compared to
+% seccomp. This will involve 4) proposing a privilege reduction metric as well as
+% 5) implementing auxiliary security analysis tooling.
+%
+% We also aim to 6) validate that our core filtering logic does not impact correct
+% system call functioning, and 7) asses the runtime performance introduced by \af
+% over a diverse set of benchmark applications, compared against seccomp and
+% unfiltered results.
+%
+\subsection{Implementation, Validation, and Evaluation}
+
+To implement \af within the kernel, we used \ac{bpf}. Our core filtering logic
+utilised \textit{Linux tracepoints} to execute every time a system
+call was made. We relied on \ac{bpf} maps, ringbuffers, and helper functions to
+implement our filtering logic robustly. We also implemented tracing logic to
+enable performance optimisations. The \ac{bpf} program requires configuration,
+mounting to the tracepoint, and needs some way to start the filtered
+application. We achieved this by implementing a user space ``frontend'' in Go.
+
+To validate and evaluate \af, we needed to be able to run apps with \af enabled.
+This required defining \textit{system call whitelists} for each area of these
+application's address spaces. Given the project's novelty, no off the shelf
+software was able to do this. We therefore implemented a dynamic analysis based
+system call whitelist generation tool, \afgen.
+
+We validated \af during development with a series of carefully crafted example
+programs, and used the \ac{ltp} system call test suite to validate that our core
+filtering logic did not lead to broken system call functioning.  
+
+\subsection{Key Findings}
+
+After verifying our core filtering logic did not lead to breakages, we carried
+out security and performance analysis. For this we picked five server 
+applications representative of common workloads and configured them to each
+stress a different \ac{os} subsystem. 
+
+Our median privilege reduction score was \textit{52.6\%} (exhibited by the
+\ac{npb} test suite), with scores ranging from \textit{24.4\%} (Postgres) to
+\textit{55.6\%} (\texttt{fio}).
+
+We observed highly variable levels of slowdown across the five benchmarks. While
+Nginx processed \textit{25.1\%} fewer requests per second when filtered with \af
+over seccomp, \texttt{fio} and \ac{npb} saw no significant slowdown. We conclude
+that performance varies highly by workload, with system call frequency and
+user space stack depth likely being influencing factors.
