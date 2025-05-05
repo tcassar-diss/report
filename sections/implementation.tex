@@ -441,12 +441,12 @@ of a ringbuffer.
 \subsection{Debug Features}
 
 To aid observability when debugging, we also implemented some extra features
-on top of the aforementioned \textit{verbose} mode.
+on top of the \textit{verbose} mode.
 
-\subsubsection{Logging}\todo{cut if need}
+\subsubsection{Logging}
 
 A \textit{DEBUG} mode,
-which prints execution info \textbf{from \ac{bpf}} to the
+which prints execution information from \ac{bpf} to the
 \texttt{/sys/kernel/tracing/trace\_pipe} pseudofile, was implemented for
 kernel-side logging. This incurs a substantial performance penalty, so it is only
 activated when the \ac{bpf} source is compiled with the \texttt{\#DEBUG} macro

@@ -14,7 +14,7 @@ production systems apply a single coarse-grained policy to
 an entire application, making them too permissive and therefore suboptimal
 \cite{OPTIMUS}. 
 We propose \af: a novel, fine-grained, \textit{spatial} system call filter
-written in \ac{bpf}. \af is able to filter system calls based on where in
+written using \ac{bpf}. \af is able to filter system calls based on where in
 the process's \ac{vma}, the system call was issued, thereby respecting the 
 \ac{polp}\cite{SALTZER_SCHROEDER}. Like this, we are able to use smaller, 
 more precise static filters based on code regions within the process's \ac{vma}.
@@ -62,8 +62,8 @@ of learning.
         place is available in the University IP Policy (see
         \href{http://documents.manchester.ac.uk/DocuInfo.aspx?DocID=24420}{\url{http://documents.manchester.ac.uk/DocuInfo.aspx?DocID=24420}}),
         in any relevant Thesis restriction declarations deposited in the
-        University Library, The University Library’s regulations (see
-        \href{http://www.library.manchester.ac.uk/about/regulations/}{\url{http://www.library.manchester.ac.uk/about/regulations/}}) and in The University’s policy on presentation of Theses
+        University Library, The University Library's regulations (see
+        \href{http://www.library.manchester.ac.uk/about/regulations/}{\url{http://www.library.manchester.ac.uk/about/regulations/}}) and in The University's policy on presentation of Theses
 \end{enumerate}
 
 \clearpage
