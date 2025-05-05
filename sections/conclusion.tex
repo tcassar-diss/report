@@ -18,7 +18,7 @@ results.
 Coarse-grained system call filters such as seccomp are sub-optimal.
 Larger applications make more system calls and therefore coarse filters can be
 too permissive. Thus, we propose \af -- a novel solution -- which implements a 
-\textit{fine grained system call filtering policy}.
+\textit{fine-grained system call filtering policy}.
 
 Instead of applying a single, broad filter to an application, we apply multiple
 smaller, more precise filters to different portions of the process \ac{vma}.
@@ -41,7 +41,7 @@ System call filtering research has not defined a standard measure of privilege.
 Therefore, we propose a \textit{probabilistic} metric for application privilege.
 Our metric is based on summing weighted danger scores of the system calls
 permitted by a filter. Our metric allows us to quantify the security benefits
-of using \af over seccomp. We also implemented a custom dynamic-analysis based
+of using \af over seccomp. We also implemented a custom dynamic analysis based
 evaluation tool, \texttt{syso}, to trace where in the \ac{vma} applications make 
 system calls and apply the metric to the results.
 

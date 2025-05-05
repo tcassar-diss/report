@@ -8,7 +8,7 @@ complexity makes these filters less effective \cite{OPTIMUS}. Attackers now have
 opportunities to execute malicious system calls without triggering these system
 call filters. 
 
-We aim to address this gap with \af, a \textit{fine grained system call
+We aim to address this gap with \af, a \textit{fine-grained system call
 filtering solution} written in \ac{bpf}. \af accounts for where in the process's \ac{vma} each
 system call was made and applies smaller, more precise whitelists to
 different areas of the address space, significantly reducing privilege.

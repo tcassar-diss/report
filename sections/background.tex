@@ -78,7 +78,7 @@ permission, \acp{uid}/\acp{gid}, and \ac{aslr} are relevant to \af.
 In Linux, each process has \iac{uid} and one or more \acp{gid}.
 These IDs determine which privileges different processes are allowed - the kernel enforces these
 privileges. \af needs to be run with
-\iac{uid}/\iac{gid} combination which gives the process the
+\iac{uid}/\ac{gid} combination which gives the process the
 \texttt{CAP\_SYS\_ADMIN} privilege in order to mount \ac{bpf} programs,
 discussed further in Section~\ref{subsec:bgd-bpf}. However, \af needs to ensure
 that the applications it launches with its system call filter enabled do not
