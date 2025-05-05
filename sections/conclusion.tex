@@ -1,19 +1,19 @@
-\section{Conclusion}
+\section{Conclusion}\label{sec:conclusion}
 
 
 \iffalse
 
+You need a proper conclusion chapter that will:
+- recontextualise and remotivate the researhc problem tackled
+- brieflly summarise your solution and its evaluation
+- optionally present some of the limitations of the current prototype
+- optionally include some critical reflection
+- and list avenues for future works
+
 \fi
 
-% You need a proper conclusion chapter that will:
-% - recontextualise and remotivate the researhc problem tackled
-% - brieflly summarise your solution and its evaluation
-% - optionally present some of the limitations of the current prototype
-% - optionally include some critical reflection
-% - and list avenues for future works
-
-We conclude by re-motivating our research problem, summarising our results and
-limitations, and list avenues for future works.
+We conclude this report by revisiting our research problem and reflecting on our
+results.
 
 Coarse-grained system call filters such as seccomp are sub-optimal.
 Larger applications make more system calls and therefore coarse filters can be
@@ -60,14 +60,9 @@ when compared to unfiltered results}.
 We validated that our implementation was correct using the \ac{ltp} system call
 test suite. We saw 11(/1500) failures introduced when the test suite was spawned via
 \af, and believe these to be an implementation artefact caused by how we chose
-to \textit{de-privilege our filtered application}. We note that using a
-\texttt{setuid} program would likely fix these failures, and that
-incompatibility was not caused by the core filtering logic. Therefore, we were
-able to proceed with evaluation despite these failures.
-
-% To investigate the variability in performance, we altered \af to record
-% timestamps during its execution. We found that system calls issued during the
-% Redis benchmark were significantly faster to process than other system calls
+to \textit{de-privilege our filtered application} rather than with the filtering
+logic itself. Therefore, we were able to proceed with our evaluation despite
+these failures. 
 
 \subsection{Limitations}
 
