@@ -1,5 +1,10 @@
 \section{Conclusion}
 
+
+\iffalse
+
+\fi
+
 % You need a proper conclusion chapter that will:
 % - recontextualise and remotivate the researhc problem tackled
 % - brieflly summarise your solution and its evaluation
@@ -7,4 +12,108 @@
 % - optionally include some critical reflection
 % - and list avenues for future works
 
+We conclude by re-motivating our research problem, summarising our results and
+limitations, and list avenues for future works.
 
+Coarse-grained system call filters such as seccomp are sub-optimal.
+Larger applications make more system calls and therefore coarse filters can be
+too permissive. Thus, we propose \af, a novel solution, which implements a 
+\textit{fine grained system call filtering policy}.
+
+Instead of applying a single, broad filter to an application, we apply multiple
+smaller, more precise filters to different portions of the process \ac{vma}.
+Like this, we propose a \textit{spatial} filtering policy. 
+
+By decomposing the application spatially, \af adheres more closely to the
+\ac{polp} than seccomp and sees significant privilege reduction as a result.
+
+\subsection{Key Achievements and Findings}
+
+We implemented \af's in-kernel filtering logic in \ac{bpf}, leveraging
+\textit{stack unwinding} and \textit{address space mappings} to identify where
+system calls were invoked within the process's address space. Running benchmarks
+and tests required \textit{whitelists} -- since our proposed spatial filtering
+is novel, no existing tooling supports associating system calls with where they
+were called from. Therefore, we also implemented \texttt{afgen} - a
+dynamic analysis based whitelist generator.
+
+System call filtering research has not defined a standard measure of privilege.
+Therefore, we propose a \textit{probabilistic} metric for application privilege.
+Our metric is based on summing weighted danger scores of the system calls
+permitted by a filter. Our metric allows us to quantify the security benefits
+of using \af over seccomp. We also implemented a custom dynamic-analysis based
+evaluation tool, \texttt{syso}, to trace where in the \ac{vma} applications make 
+system calls and apply the metric to the results.
+
+Using our metric, we found a median privilege reduction of \textit{52.6\%}
+(achieved by \ac{npb}) across our suite of five benchmarks. We saw variance in that
+result, with Nginx and Postgres showing more modest privilege reduction at
+$\sim$\textit{24\%}. Redis and \texttt{fio} had reductions of 55.5\% and 55.6\%
+respectively.
+
+Alongside security evaluation, we evaluated the performance cost of using \af
+and found that results varied by workload. Nginx and Postgres experienced 25.1\% and 16.0\%
+less throughput respectively compared to a minimal seccomp filter. \texttt{fio}
+and the \ac{npb} test suite, however, showed \textit{no significant slowdown
+when compared to unfiltered results}. 
+
+We validated that our implementation was correct using the \ac{ltp} system call
+test suite. We saw 11(/1500) failures introduced when the test suite was spawned via
+\af, and believe these to be an implementation artefact caused by how we chose
+to \textit{de-privilege our filtered application}. We note that using a
+\texttt{setuid} program would likely fix these failures, and that
+incompatibility was not caused by the core filtering logic. Therefore, we were
+able to proceed with evaluation despite these failures.
+
+% To investigate the variability in performance, we altered \af to record
+% timestamps during its execution. We found that system calls issued during the
+% Redis benchmark were significantly faster to process than other system calls
+
+\subsection{Limitations}
+
+Our approach to system call filtering is not without limitations. Our form of 
+spatial filtering only applies to dynamically linked executables.
+\af can run without issue on a statically linked executable but will not operate
+any differently to a standard seccomp filter as there will be no shared
+libraries in the \ac{vma}.
+
+We also require the filtered process's \ac{pid} and some information about the
+process's address space before filtering can begin. This leaves a \textit{blind
+spot} of around 300ms were no filtering is in place when the application starts.
+This may make \af unsuitable for \ac{faas} applications without re-engineering.
+
+We also acknowledge limitations in our evaluation strategy. Our evaluation tool,
+\texttt{syso}, is based on dynamic analysis, which is liable to miss possible
+system calls. Therefore, our privilege reduction estimates are
+\textit{inherently probabilistic} -- they provide reasoning about the
+\textit{possible danger level} if an application is compromised.
+
+\subsection{Future Work Directions}
+
+Addressing this reliance on dynamic analysis is a key area for future research.
+
+Static analysis based whitelist generation for \af is a separate research
+question to the filtering policy approach itself, but would be invaluable in
+making \af a production-ready solution. Without sensible whitelist generation,
+the risk of false positives is high, which may lead to downtime where there was
+no compromise to begin with.
+
+Future work could also look at a more precise evaluation metric. While our
+security analysis allows reasoning about the chances of exploitation given
+application compromise, we acknowledge that reasoning about system calls in
+only three danger levels is imprecise. 
+
+We highlight the need for using a \texttt{setuid} program to de-privilege
+the filtered application to resolve \ac{ltp} test failure issues, and observe
+that performance tuning may be able to reduce the performance overheads seen by
+\af especially with stack unwinding.
+
+Investigating finer grained system call filtering, for instance applying
+whitelists on a \textit{function level}, may be an avenue to restrict
+application privilege further.
+
+While further granularity may be possible, this work demonstrates that
+filtering at the shared library level  offers significant opportunity for
+privilege reduction when compared to traditional filtering mechanisms. \af
+confirms the feasibility of implementing such policies effectively using
+current technology such as \ac{bpf}. 
