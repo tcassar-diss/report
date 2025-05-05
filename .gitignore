@@ -7,6 +7,8 @@
 *.dtmp
 *.svg
 *.png
+*.mp4
+*.m4a
 
 # Provided by 
 #    https://github.com/github/gitignore/blob/main/TeX.gitignore

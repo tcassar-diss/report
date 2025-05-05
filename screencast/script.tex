@@ -1,0 +1,123 @@
+\documentclass[titlepage,12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{courier}
+\renewcommand{\rmdefault}{\ttdefault}
+\usepackage{xparse, expl3}
+
+\newcommand{\filmtitle}[1]{\begin{center}\centering "\underline{#1}"\end{center}}
+
+\newcommand{\stagedirection}[1]{\MakeUppercase{#1}\par\vspace{0.5cm}}
+\newcommand{\sd}[1]{\stagedirection{#1}}
+
+\NewDocumentCommand{\scenedescription}{ >{\SplitList{.}} m }{%
+\ProcessList{#1}{\addnewline}%
+}
+
+\newcommand{\addnewline}[1]{%
+#1.\par
+}
+
+\newcounter{scenenumber}
+\newcounter{shotnumber}
+\setcounter{scenenumber}{0}
+\setcounter{shotnumber}{0}
+
+\NewDocumentCommand{\getscenenumber}{}{
+\ifnum\value{shotnumber}=0
+\thescenenumber
+\else
+\thescenenumber-\Alph{shotnumber}
+\fi
+}
+
+\newcommand{\barescene}[1]{
+\stepcounter{scenenumber}%
+\setcounter{shotnumber}{0}%
+\textbf{\MakeUppercase{#1}\hfill\getscenenumber}%
+\par%
+}
+\newcommand{\scene}[2]{\barescene{#1}\scenedescription{#2}}
+\newcommand{\bareshot}[1]{
+\stepcounter{shotnumber}%
+\textbf{\MakeUppercase{#1}\hfill\getscenenumber}\par%
+}
+\newcommand{\shot}[2]{\bareshot{#1}\scenedescription{#2}}
+
+\newcommand{\dialogue}[2]{
+\vspace{-0.25cm}%
+\begin{center}%
+\MakeUppercase{\textbf{#1}}\\
+\scenedescription{#2}%
+\end{center}%
+\vspace{-0.25cm}%
+}
+
+% This macro takes one argument (#1) which is the dialogue text
+% It calls \dialogue with "HENRY" as the speaker
+\newcommand{\henry}[1]{\dialogue{HENRY}{#1}}
+
+% --- Define the \reuben macro ---
+% This macro takes one argument (#1) which is the dialogue text
+% It calls \dialogue with "REUBEN" as the speaker
+\newcommand{\reuben}[1]{\dialogue{REUBEN}{#1}}
+
+\begin{document}
+\begin{titlepage}
+\centering
+\filmtitle{addrfilter}
+\vspace{1cm}
+by\\
+\vspace{1cm}
+Reuben Briggs\\
+\vspace{0.5cm}
+and\\
+\vspace{0.5cm}
+Henry Myall\\
+\vspace{3cm}
+Based on screenplay\\
+\vspace{0.5cm}
+by\\
+\vspace{0.5cm}
+Tom Cassar
+\vspace{1cm} \\
+Story by\\
+\vspace{0.5cm}
+Tom Cassar
+\vfill
+
+% Bottom of the page
+{\large \today\par}
+\end{titlepage}
+
+\filmtitle{addrfilter}
+
+\stagedirection{fade in}
+\sd{sometime in the future (half an hour):}
+
+\scene{int. edging house}{Living room}
+
+\henry{Do you know what happened to me yesterday Reuben?}
+
+\reuben{No lad what happened?}
+
+\henry{My app got hacked!}
+
+\sd{Dun dun duun!}
+
+\reuben{Spongey that. How did they hack you?}
+
+\henry{They masterfully compromised my compartmentalised application, and used a
+series of system calls to exploit a vulnerability within the kernel.}
+
+\reuben{Oh dear. Why weren't you using a system call filter like seccomp?}
+
+\henry{I was! But apps have just got so big these days, the attacker had access
+to basically every system call he could ever need.}
+
+\reuben{If only someone had implemented a fine-grained system call filtering
+solution!}
+
+\henry{Ha! Chance would be a fine thing.}
+
+\end{document}
